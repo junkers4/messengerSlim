@@ -1,0 +1,17 @@
+# Local binaries and artifacts
+input/
+output/
+work/
+
+# Decompiled/app internals (never commit)
+**/*.apk
+**/*.apks
+**/*.aab
+**/*.idsig
+**/*.keystore
+**/*.jks
+
+# OS/editor
+.vscode/
+.DS_Store
+Thumbs.db

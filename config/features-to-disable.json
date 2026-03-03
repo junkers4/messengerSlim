@@ -1,0 +1,23 @@
+{
+  "targetVersion": "550.0.0.45.63",
+  "goal": "Keep communication-only experience",
+  "keep": [
+    "Facebook login",
+    "Inbox/chat",
+    "Send photos/videos",
+    "Voice messages"
+  ],
+  "disable": [
+    "Stories/Notes",
+    "Reels/Discover",
+    "Marketplace entrypoints",
+    "Meta AI entrypoints",
+    "Suggested content",
+    "People tab",
+    "Calls/Video tab entrypoints"
+  ],
+  "notes": [
+    "This file is intent/config only.",
+    "No proprietary code is stored in repository."
+  ]
+}
