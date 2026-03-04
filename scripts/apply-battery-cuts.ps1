@@ -64,6 +64,76 @@ $binderNoop = @"
 .end method
 "@
 
+$binderNoopPublic = @"
+.method public onBind(Landroid/content/Intent;)Landroid/os/IBinder;
+  .locals 1
+
+  const/4 v0, 0x0
+
+  return-object v0
+.end method
+"@
+
+$startCommandNoop = @"
+.method public onStartCommand(Landroid/content/Intent;II)I
+  .locals 1
+
+  const/4 v0, 0x2
+
+  return v0
+.end method
+"@
+
+$startCommandNoopFinal = @"
+.method public final onStartCommand(Landroid/content/Intent;II)I
+  .locals 1
+
+  const/4 v0, 0x2
+
+  return v0
+.end method
+"@
+
+$startJobNoop = @"
+.method public onStartJob(Landroid/app/job/JobParameters;)Z
+  .locals 1
+
+  const/4 v0, 0x0
+
+  return v0
+.end method
+"@
+
+$startJobNoopFinal = @"
+.method public final onStartJob(Landroid/app/job/JobParameters;)Z
+  .locals 1
+
+  const/4 v0, 0x0
+
+  return v0
+.end method
+"@
+
+$stopJobNoop = @"
+.method public onStopJob(Landroid/app/job/JobParameters;)Z
+  .locals 1
+
+  const/4 v0, 0x0
+
+  return v0
+.end method
+"@
+
+$stopJobNoopFinal = @"
+.method public final onStopJob(Landroid/app/job/JobParameters;)Z
+  .locals 1
+
+  const/4 v0, 0x0
+
+  return v0
+.end method
+"@
+
 $binderNoopA01 = @"
 .method public A01()Landroid/os/IBinder;
     .locals 1
@@ -95,8 +165,52 @@ $rules = @(
   @{ Path = 'smali_classes4/com/facebook/messengercar/CarNotificationService.smali'; Header = '.method public A03(Landroid/content/Intent;)V'; Replacement = $voidIntentNoop },
   @{ Path = 'smali_classes7/com/facebook/messaging/notify/service/MessengerDirectReplyService.smali'; Header = '.method public A03(Landroid/content/Intent;)V'; Replacement = $voidIntentNoop },
   @{ Path = 'smali_classes7/com/facebook/messaging/notify/service/MessengerLikeService.smali'; Header = '.method public A03(Landroid/content/Intent;)V'; Replacement = $voidIntentNoop },
+  @{ Path = 'smali_classes7/com/facebook/account/twofac/protocol/LoginApprovalNotificationService.smali'; Header = '.method public A03(Landroid/content/Intent;)V'; Replacement = $voidIntentNoop },
+  @{ Path = 'smali_classes4/com/facebook/push/registration/RegistrarHelperReceiver.smali'; Header = '.method public A05(Landroid/content/Context;Landroid/content/Intent;LX/0NL;)V'; Replacement = $voidReceiverNoop },
+  @{ Path = 'smali_classes8/com/facebook/push/nna/NNABroadcastReceiver.smali'; Header = '.method public A05(Landroid/content/Context;Landroid/content/Intent;LX/0NL;)V'; Replacement = $voidReceiverNoop },
   @{ Path = 'smali_classes7/com/facebook/messaging/directshare/DirectShareChooserTargetService.smali'; Header = '.method public onGetChooserTargets(Landroid/content/ComponentName;Landroid/content/IntentFilter;)Ljava/util/List;'; Replacement = $listNoop },
   @{ Path = 'smali_classes10/androidx/sharetarget/ChooserTargetServiceCompat.smali'; Header = '.method public onGetChooserTargets(Landroid/content/ComponentName;Landroid/content/IntentFilter;)Ljava/util/List;'; Replacement = $listNoop },
+  @{ Path = 'smali/com/facebook/mqttlite/MqttService.smali'; Header = '.method public onStartCommand(Landroid/content/Intent;II)I'; Replacement = $startCommandNoop },
+  @{ Path = 'smali/com/facebook/push/fbnslite/PushSdkFbnsReceiverService.smali'; Header = '.method public onStartCommand(Landroid/content/Intent;II)I'; Replacement = $startCommandNoop },
+  @{ Path = 'smali_classes10/androidx/work/impl/background/systemalarm/SystemAlarmService.smali'; Header = '.method public onStartCommand(Landroid/content/Intent;II)I'; Replacement = $startCommandNoop },
+  @{ Path = 'smali_classes10/com/facebook/advancedcryptotransport/api/impl/service/AdvancedCryptoTransportNotificationService.smali'; Header = '.method public onBind(Landroid/content/Intent;)Landroid/os/IBinder;'; Replacement = $binderNoopPublic },
+  @{ Path = 'smali_classes10/com/facebook/advancedcryptotransport/api/impl/service/AdvancedCryptoTransportNotificationService.smali'; Header = '.method public onStartCommand(Landroid/content/Intent;II)I'; Replacement = $startCommandNoop },
+  @{ Path = 'smali_classes10/com/facebook/analytics2/logger/GooglePlayUploadService.smali'; Header = '.method public onStartCommand(Landroid/content/Intent;II)I'; Replacement = $startCommandNoop },
+  @{ Path = 'smali_classes10/com/facebook/analytics2/logger/service/LollipopUploadSafeService.smali'; Header = '.method public onStartCommand(Landroid/content/Intent;II)I'; Replacement = $startCommandNoop },
+  @{ Path = 'smali_classes10/com/facebook/analytics2/logger/service/LollipopUploadSafeService.smali'; Header = '.method public onStartJob(Landroid/app/job/JobParameters;)Z'; Replacement = $startJobNoop },
+  @{ Path = 'smali_classes10/com/facebook/analytics2/logger/service/LollipopUploadSafeService.smali'; Header = '.method public onStopJob(Landroid/app/job/JobParameters;)Z'; Replacement = $stopJobNoop },
+  @{ Path = 'smali_classes10/com/facebook/messaging/linkhandling/plugins/facebookvideolinkhandler/implementation/videolinkhandlerhelper/VideoLinkHandlerHelperNotificationService.smali'; Header = '.method public onBind(Landroid/content/Intent;)Landroid/os/IBinder;'; Replacement = $binderNoopPublic },
+  @{ Path = 'smali_classes10/com/facebook/messaging/linkhandling/plugins/facebookvideolinkhandler/implementation/videolinkhandlerhelper/VideoLinkHandlerHelperNotificationService.smali'; Header = '.method public onStartCommand(Landroid/content/Intent;II)I'; Replacement = $startCommandNoop },
+  @{ Path = 'smali_classes10/com/facebook/voltron/download/scheduledinstaller/OxygenScheduledInstallerJobService.smali'; Header = '.method public onStartJob(Landroid/app/job/JobParameters;)Z'; Replacement = $startJobNoop },
+  @{ Path = 'smali_classes10/com/facebook/voltron/download/scheduledinstaller/OxygenScheduledInstallerJobService.smali'; Header = '.method public onStopJob(Landroid/app/job/JobParameters;)Z'; Replacement = $stopJobNoop },
+  @{ Path = 'smali_classes10/com/google/android/datatransport/runtime/scheduling/jobscheduling/JobInfoSchedulerService.smali'; Header = '.method public onStartJob(Landroid/app/job/JobParameters;)Z'; Replacement = $startJobNoop },
+  @{ Path = 'smali_classes10/com/google/android/datatransport/runtime/scheduling/jobscheduling/JobInfoSchedulerService.smali'; Header = '.method public onStopJob(Landroid/app/job/JobParameters;)Z'; Replacement = $stopJobNoop },
+  @{ Path = 'smali_classes11/com/facebook/messenger/app/background/msys/MsysBackgroundSyncService.smali'; Header = '.method public onStartJob(Landroid/app/job/JobParameters;)Z'; Replacement = $startJobNoop },
+  @{ Path = 'smali_classes11/com/facebook/messenger/app/background/msys/MsysBackgroundSyncService.smali'; Header = '.method public onStopJob(Landroid/app/job/JobParameters;)Z'; Replacement = $stopJobNoop },
+  @{ Path = 'smali_classes12/com/facebook/falco/jobscheduler/FFJobService.smali'; Header = '.method public onStartJob(Landroid/app/job/JobParameters;)Z'; Replacement = $startJobNoop },
+  @{ Path = 'smali_classes12/com/facebook/falco/jobscheduler/FFJobService.smali'; Header = '.method public onStopJob(Landroid/app/job/JobParameters;)Z'; Replacement = $stopJobNoop },
+  @{ Path = 'smali_classes3/androidx/work/impl/background/systemjob/SystemJobService.smali'; Header = '.method public onStartJob(Landroid/app/job/JobParameters;)Z'; Replacement = $startJobNoop },
+  @{ Path = 'smali_classes3/androidx/work/impl/background/systemjob/SystemJobService.smali'; Header = '.method public onStopJob(Landroid/app/job/JobParameters;)Z'; Replacement = $stopJobNoop },
+  @{ Path = 'smali_classes3/com/facebook/analytics2/logger/legacy/uploader/LollipopUploadService.smali'; Header = '.method public onStartCommand(Landroid/content/Intent;II)I'; Replacement = $startCommandNoop },
+  @{ Path = 'smali_classes3/com/facebook/analytics2/logger/legacy/uploader/LollipopUploadService.smali'; Header = '.method public onStartJob(Landroid/app/job/JobParameters;)Z'; Replacement = $startJobNoop },
+  @{ Path = 'smali_classes3/com/facebook/analytics2/logger/legacy/uploader/LollipopUploadService.smali'; Header = '.method public onStopJob(Landroid/app/job/JobParameters;)Z'; Replacement = $stopJobNoop },
+  @{ Path = 'smali_classes3/com/facebook/oxygen/preloads/sdk/firstparty/managedappcache/IsManagedAppCacheJobService.smali'; Header = '.method public onStartJob(Landroid/app/job/JobParameters;)Z'; Replacement = $startJobNoop },
+  @{ Path = 'smali_classes3/com/facebook/oxygen/preloads/sdk/firstparty/managedappcache/IsManagedAppCacheJobService.smali'; Header = '.method public onStopJob(Landroid/app/job/JobParameters;)Z'; Replacement = $stopJobNoop },
+  @{ Path = 'smali_classes10/com/facebook/common/jobscheduler/compat/GcmTaskServiceCompat.smali'; Header = '.method public final onStartCommand(Landroid/content/Intent;II)I'; Replacement = $startCommandNoopFinal },
+  @{ Path = 'smali_classes3/com/facebook/common/jobscheduler/compat/JobServiceCompat.smali'; Header = '.method public final onStartCommand(Landroid/content/Intent;II)I'; Replacement = $startCommandNoopFinal },
+  @{ Path = 'smali_classes3/com/facebook/common/jobscheduler/compat/JobServiceCompat.smali'; Header = '.method public final onStartJob(Landroid/app/job/JobParameters;)Z'; Replacement = $startJobNoopFinal },
+  @{ Path = 'smali_classes3/com/facebook/common/jobscheduler/compat/JobServiceCompat.smali'; Header = '.method public final onStopJob(Landroid/app/job/JobParameters;)Z'; Replacement = $stopJobNoopFinal },
+  @{ Path = 'smali_classes4/com/facebook/analytics2/logger/legacy/uploader/AlarmBasedUploadService.smali'; Header = '.method public onBind(Landroid/content/Intent;)Landroid/os/IBinder;'; Replacement = $binderNoopPublic },
+  @{ Path = 'smali_classes4/com/facebook/analytics2/logger/legacy/uploader/AlarmBasedUploadService.smali'; Header = '.method public onStartCommand(Landroid/content/Intent;II)I'; Replacement = $startCommandNoop },
+  @{ Path = 'smali_classes10/com/google/android/gms/analytics/AnalyticsJobService.smali'; Header = '.method public final onStartCommand(Landroid/content/Intent;II)I'; Replacement = $startCommandNoopFinal },
+  @{ Path = 'smali_classes10/com/google/android/gms/analytics/AnalyticsJobService.smali'; Header = '.method public final onStartJob(Landroid/app/job/JobParameters;)Z'; Replacement = $startJobNoopFinal },
+  @{ Path = 'smali_classes10/com/google/android/gms/analytics/AnalyticsJobService.smali'; Header = '.method public final onStopJob(Landroid/app/job/JobParameters;)Z'; Replacement = $stopJobNoopFinal },
+  @{ Path = 'smali_classes10/com/facebook/screencast/ScreencastService.smali'; Header = '.method public onBind(Landroid/content/Intent;)Landroid/os/IBinder;'; Replacement = $binderNoopPublic },
+  @{ Path = 'smali_classes10/com/facebook/screencast/ScreencastService.smali'; Header = '.method public onStartCommand(Landroid/content/Intent;II)I'; Replacement = $startCommandNoop },
+  @{ Path = 'smali_classes4/com/facebook/video/heroplayer/service/HeroKeepAliveService.smali'; Header = '.method public onBind(Landroid/content/Intent;)Landroid/os/IBinder;'; Replacement = $binderNoopPublic },
+  @{ Path = 'smali_classes4/com/facebook/video/heroplayer/service/HeroKeepAliveService.smali'; Header = '.method public onStartCommand(Landroid/content/Intent;II)I'; Replacement = $startCommandNoop },
+  @{ Path = 'smali_classes10/com/google/android/gms/analytics/AnalyticsService.smali'; Header = '.method public final onBind(Landroid/content/Intent;)Landroid/os/IBinder;'; Replacement = $binderNoop },
+  @{ Path = 'smali_classes10/com/google/android/gms/analytics/AnalyticsService.smali'; Header = '.method public final onStartCommand(Landroid/content/Intent;II)I'; Replacement = $startCommandNoopFinal },
   @{ Path = 'smali_classes3/com/facebook/wearlistener/DataLayerListenerService.smali'; Header = '.method public final onBind(Landroid/content/Intent;)Landroid/os/IBinder;'; Replacement = $binderNoop },
   @{ Path = 'smali_classes10/com/meta/wearable/acdc/sdk/service/ACDCRegistrationService.smali'; Header = '.method public A01()Landroid/os/IBinder;'; Replacement = $binderNoopA01 },
   @{ Path = 'smali_classes10/com/meta/wearable/acdc/sdk/service/ACDCRegistrationService.smali'; Header = '.method public A04()V'; Replacement = $voidA04Noop }
