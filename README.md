@@ -16,6 +16,7 @@ Minimal, **local-only** workflow for experimenting with a slimmed Messenger buil
 - `scripts/prepare-workspace.ps1` – creates local working folders and checks basic tools.
 - `scripts/decompile.ps1` – decompiles your local APK with apktool.
 - `scripts/rebuild-sign.ps1` – rebuilds + signs an APK (debug key by default).
+- `scripts/apply-ai-cuts.ps1` – applies current AI entrypoint cut patch set to local smali.
 - `config/features-to-disable.json` – your patch intent checklist (Stories, Reels, AI, etc.).
 
 ## Prerequisites (install locally)
@@ -39,6 +40,14 @@ Minimal, **local-only** workflow for experimenting with a slimmed Messenger buil
    - `./scripts/rebuild-sign.ps1`
 5. Output signed APK:
    - `output/messenger-550.0.0.45.63-signed.apk`
+
+## no-res workflow (for problematic APK resources)
+
+If regular resource rebuild fails on this APK source, use `work/decompiled_nres` and apply the patch set there:
+
+- `./scripts/apply-ai-cuts.ps1`
+
+Then rebuild/sign from `work/decompiled_nres` (same local-only policy).
 
 ## APK source note
 
