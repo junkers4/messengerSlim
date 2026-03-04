@@ -46,6 +46,9 @@ Minimal, **local-only** workflow for experimenting with a slimmed Messenger buil
 If regular resource rebuild fails on this APK source, use `work/decompiled_nres` and apply the patch set there:
 
 - `./scripts/apply-ai-cuts.ps1`
+- `./scripts/apply-ai-cuts.ps1 -Level core`
+- `./scripts/apply-ai-cuts.ps1 -Level extended`
+- `./scripts/apply-ai-cuts.ps1 -Level aggressive`
 
 Then rebuild/sign from `work/decompiled_nres` (same local-only policy).
 
