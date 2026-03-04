@@ -12,17 +12,17 @@ if (-not (Test-Path $base)) {
   throw "Work directory not found: $base"
 }
 
-function Replace-FirstMethod {
+function Replace-MethodByHeader {
   param(
     [Parameter(Mandatory = $true)]
     [string]$Content,
     [Parameter(Mandatory = $true)]
-    [string]$MethodSignatureRegex,
+    [string]$MethodHeader,
     [Parameter(Mandatory = $true)]
     [string]$Replacement
   )
 
-  $pattern = "(?s)\\.method[\\s\\S]*?$MethodSignatureRegex[\\s\\S]*?\\.end method"
+  $pattern = '(?s)' + [regex]::Escape($MethodHeader) + '.*?\.end method'
   return [regex]::Replace($Content, $pattern, $Replacement, 1)
 }
 
@@ -83,15 +83,23 @@ $voidA04Noop = @"
 "@
 
 $rules = @(
-  @{ Path = 'smali_classes4/com/facebook/messaging/chatheads/service/ChatHeadsServiceBroadcastReceiver.smali'; Sig = 'A05\(Landroid/content/Context;Landroid/content/Intent;LX/0NL;\)V'; Replacement = $voidReceiverNoop },
-  @{ Path = 'smali/com/facebook/messenger/app/background/MessengerBackgroundWakeupReceiver.smali'; Sig = 'A05\(Landroid/content/Context;Landroid/content/Intent;LX/0NL;\)V'; Replacement = $voidReceiverNoop },
-  @{ Path = 'smali_classes7/com/facebook/messaging/notify/plugins/handler/messagereminder/MessageNotificationSurveyReceiver.smali'; Sig = 'A05\(Landroid/content/Context;Landroid/content/Intent;LX/0NL;\)V'; Replacement = $voidReceiverNoop },
-  @{ Path = 'smali_classes4/com/facebook/messaging/notify/logging/MessagesSystemTrayLogService.smali'; Sig = 'A03\(Landroid/content/Intent;\)V'; Replacement = $voidIntentNoop },
-  @{ Path = 'smali_classes7/com/facebook/messaging/directshare/DirectShareChooserTargetService.smali'; Sig = 'onGetChooserTargets\(Landroid/content/ComponentName;Landroid/content/IntentFilter;\)Ljava/util/List;'; Replacement = $listNoop },
-  @{ Path = 'smali_classes10/androidx/sharetarget/ChooserTargetServiceCompat.smali'; Sig = 'onGetChooserTargets\(Landroid/content/ComponentName;Landroid/content/IntentFilter;\)Ljava/util/List;'; Replacement = $listNoop },
-  @{ Path = 'smali_classes3/com/facebook/wearlistener/DataLayerListenerService.smali'; Sig = 'onBind\(Landroid/content/Intent;\)Landroid/os/IBinder;'; Replacement = $binderNoop },
-  @{ Path = 'smali_classes10/com/meta/wearable/acdc/sdk/service/ACDCRegistrationService.smali'; Sig = 'A01\(\)Landroid/os/IBinder;'; Replacement = $binderNoopA01 },
-  @{ Path = 'smali_classes10/com/meta/wearable/acdc/sdk/service/ACDCRegistrationService.smali'; Sig = 'A04\(\)V'; Replacement = $voidA04Noop }
+  @{ Path = 'smali/com/facebook/fdidlite/FDIDSyncLiteReceiver.smali'; Header = '.method public A05(Landroid/content/Context;Landroid/content/Intent;LX/0NL;)V'; Replacement = $voidReceiverNoop },
+  @{ Path = 'smali_classes4/com/facebook/messaging/chatheads/service/ChatHeadsServiceBroadcastReceiver.smali'; Header = '.method public A05(Landroid/content/Context;Landroid/content/Intent;LX/0NL;)V'; Replacement = $voidReceiverNoop },
+  @{ Path = 'smali/com/facebook/messenger/app/background/MessengerBackgroundWakeupReceiver.smali'; Header = '.method public A05(Landroid/content/Context;Landroid/content/Intent;LX/0NL;)V'; Replacement = $voidReceiverNoop },
+  @{ Path = 'smali_classes10/com/facebook/bugreporter/core/scheduler/AlarmsBroadcastReceiver.smali'; Header = '.method public A05(Landroid/content/Context;Landroid/content/Intent;LX/0NL;)V'; Replacement = $voidReceiverNoop },
+  @{ Path = 'smali_classes12/com/facebook/analytics2/fabric/onefabric/OneFabricUploadAlarmReceiver.smali'; Header = '.method public A05(Landroid/content/Context;Landroid/content/Intent;LX/0NL;)V'; Replacement = $voidReceiverNoop },
+  @{ Path = 'smali_classes7/com/facebook/messaging/messengerprefs/notif/NoteNotificationBroadcastReceiver.smali'; Header = '.method public A05(Landroid/content/Context;Landroid/content/Intent;LX/0NL;)V'; Replacement = $voidReceiverNoop },
+  @{ Path = 'smali_classes7/com/facebook/messaging/notify/plugins/handler/messagereminder/MessageNotificationSurveyReceiver.smali'; Header = '.method public A05(Landroid/content/Context;Landroid/content/Intent;LX/0NL;)V'; Replacement = $voidReceiverNoop },
+  @{ Path = 'smali_classes8/com/facebook/messaging/notify/client/MessagesNotificationBroadcastReceiver.smali'; Header = '.method public A05(Landroid/content/Context;Landroid/content/Intent;LX/0NL;)V'; Replacement = $voidReceiverNoop },
+  @{ Path = 'smali_classes4/com/facebook/messaging/notify/logging/MessagesSystemTrayLogService.smali'; Header = '.method public A03(Landroid/content/Intent;)V'; Replacement = $voidIntentNoop },
+  @{ Path = 'smali_classes4/com/facebook/messengercar/CarNotificationService.smali'; Header = '.method public A03(Landroid/content/Intent;)V'; Replacement = $voidIntentNoop },
+  @{ Path = 'smali_classes7/com/facebook/messaging/notify/service/MessengerDirectReplyService.smali'; Header = '.method public A03(Landroid/content/Intent;)V'; Replacement = $voidIntentNoop },
+  @{ Path = 'smali_classes7/com/facebook/messaging/notify/service/MessengerLikeService.smali'; Header = '.method public A03(Landroid/content/Intent;)V'; Replacement = $voidIntentNoop },
+  @{ Path = 'smali_classes7/com/facebook/messaging/directshare/DirectShareChooserTargetService.smali'; Header = '.method public onGetChooserTargets(Landroid/content/ComponentName;Landroid/content/IntentFilter;)Ljava/util/List;'; Replacement = $listNoop },
+  @{ Path = 'smali_classes10/androidx/sharetarget/ChooserTargetServiceCompat.smali'; Header = '.method public onGetChooserTargets(Landroid/content/ComponentName;Landroid/content/IntentFilter;)Ljava/util/List;'; Replacement = $listNoop },
+  @{ Path = 'smali_classes3/com/facebook/wearlistener/DataLayerListenerService.smali'; Header = '.method public final onBind(Landroid/content/Intent;)Landroid/os/IBinder;'; Replacement = $binderNoop },
+  @{ Path = 'smali_classes10/com/meta/wearable/acdc/sdk/service/ACDCRegistrationService.smali'; Header = '.method public A01()Landroid/os/IBinder;'; Replacement = $binderNoopA01 },
+  @{ Path = 'smali_classes10/com/meta/wearable/acdc/sdk/service/ACDCRegistrationService.smali'; Header = '.method public A04()V'; Replacement = $voidA04Noop }
 )
 
 $patched = 0
@@ -107,10 +115,10 @@ foreach ($rule in $rules) {
   }
 
   $content = Get-Content -Raw -Path $path
-  $updated = Replace-FirstMethod -Content $content -MethodSignatureRegex $rule.Sig -Replacement $rule.Replacement
+  $updated = Replace-MethodByHeader -Content $content -MethodHeader $rule.Header -Replacement $rule.Replacement
 
   if ($updated -eq $content) {
-    Write-Warning "Method pattern not replaced: $path [$($rule.Sig)]"
+    Write-Warning "Method pattern not replaced: $path [$($rule.Header)]"
     $unchanged++
     continue
   }

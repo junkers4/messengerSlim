@@ -1,6 +1,8 @@
 [CmdletBinding()]
 param(
   [string]$Version = '550.0.0.45.63',
+  [string]$WorkDir = 'work/decompiled',
+  [string]$OutputTag = '',
   [string]$KeystorePath = "$env:USERPROFILE\.android\debug.keystore",
   [string]$KeyAlias = 'androiddebugkey',
   [string]$StorePass = 'android',
@@ -86,10 +88,11 @@ function Invoke-Apktool {
 }
 
 $root = Resolve-Path (Join-Path $PSScriptRoot '..')
-$srcDir = Join-Path $root 'work/decompiled'
-$unsignedApk = Join-Path $root "output/messenger-$Version-unsigned.apk"
-$alignedApk = Join-Path $root "output/messenger-$Version-aligned.apk"
-$signedApk = Join-Path $root "output/messenger-$Version-signed.apk"
+$srcDir = Join-Path $root $WorkDir
+$tag = if ([string]::IsNullOrWhiteSpace($OutputTag)) { '' } else { "-$OutputTag" }
+$unsignedApk = Join-Path $root "output/messenger-$Version$tag-unsigned.apk"
+$alignedApk = Join-Path $root "output/messenger-$Version$tag-aligned.apk"
+$signedApk = Join-Path $root "output/messenger-$Version$tag-signed.apk"
 $zipalignCmd = Resolve-ToolCommand -CommandName 'zipalign' -FallbackFileName 'zipalign.exe'
 $apksignerCmd = Resolve-ToolCommand -CommandName 'apksigner' -FallbackFileName 'apksigner.bat'
 

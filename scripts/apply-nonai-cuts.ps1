@@ -69,7 +69,34 @@ $aggressiveOnlyTargets = @(
   'smali_classes8/com/facebook/payments/p2p/messenger/core/prefs/method/verification/PaymentMethodVerificationHostActivity.smali',
   'smali_classes8/com/facebook/payments/picker/PickerScreenActivity.smali',
   'smali_classes8/com/facebook/payments/shipping/form/ShippingAddressActivity.smali',
-  'smali_classes8/com/facebook/payments/paymentmethods/cardform/CardFormActivity.smali'
+  'smali_classes8/com/facebook/payments/paymentmethods/cardform/CardFormActivity.smali',
+  'smali_classes10/com/facebook/messaging/settings/surface/MessengerSettingActivity.smali',
+  'smali_classes7/com/facebook/messaging/settings/mesettings/surface/MessengerMePreferenceActivity.smali',
+  'smali_classes7/com/facebook/messaging/threadsettings2/activity/ThreadSettingsActivity.smali',
+  'smali_classes9/com/facebook/messaging/graph/contactmanagement/AllContactsActivity.smali',
+  'smali_classes9/com/facebook/fbavatar/FbAvatarEditorBaseActivity.smali',
+  'smali_classes10/com/facebook/messaging/business/plugins/suggestedreply/settings/mesettings/SuggestedReplySettingsActivity.smali',
+  'smali_classes10/com/facebook/messaging/earlyaccess/settingsui/EarlyAccessSettingActivity.smali',
+  'smali_classes10/com/facebook/messaging/encryptedbackups/setting/infiniteretroactivebackups/activity/EbIrbSettingsActivity.smali',
+  'smali_classes10/com/facebook/messaging/wellbeing/unknowncontact/reachabilitycontrols/activity/ReachabilitySettingsActivity.smali',
+  'smali_classes6/com/facebook/messaging/accessibility/settingsurface/AccessibilitySettingActivity.smali',
+  'smali_classes6/com/facebook/messaging/accessibility/settingsurface/ColorFilterSettingActivity.smali',
+  'smali_classes6/com/facebook/messaging/accessibility/settingsurface/motionreduction/MotionReductionSettingActivity.smali',
+  'smali_classes6/com/facebook/messaging/composer/keyboardsettings/MessengerKeyboardPreferenceActivity.smali',
+  'smali_classes6/com/facebook/messaging/encryptedbackups/infiniteretroactivebackups/setup/upsell/activity/StorageSettingsEbUpsellActivity.smali',
+  'smali_classes6/com/facebook/messaging/memories/appsettingsui/MemoriesAppSettingsActivity.smali',
+  'smali_classes6/com/facebook/messaging/privacycheckup/privacycheckupsetting/PrivacyCheckupSettingsActivity.smali',
+  'smali_classes7/com/facebook/messaging/business/ads/orderhistory/ui/InboxOrderHistorySettingActivity.smali',
+  'smali_classes7/com/facebook/messaging/business/bizrtc/pagertcsettings/PageAudioAndVideoCallsSettingActivity.smali',
+  'smali_classes7/com/facebook/messaging/dma/ui/MsplitConsentSettingsActivity.smali',
+  'smali_classes7/com/facebook/messaging/invites/settingsurface/InviteFriendSettingActivity.smali',
+  'smali_classes7/com/facebook/messaging/professionalmode/businesstools/settings/ProModeBusinessToolsSettingsActivity.smali',
+  'smali_classes7/com/facebook/messaging/wellbeing/safetyecosystem/authenticinteractions/ondevicesafetydetection/activity/SafetyDetectionSettingsActivity.smali',
+  'smali_classes8/com/facebook/messaging/lid/appsettingsui/LanguageIdentificationSettingsActivity.smali',
+  'smali_classes8/com/facebook/messaging/nativepagereply/faq/mesettings/BusinessInboxFAQSettingActivity.smali',
+  'smali_classes8/com/facebook/messaging/search/edithistory/M3SearchEditHistoryActivity.smali',
+  'smali_classes8/com/facebook/zero/zerobalance/ui/AutoflexSettingsActivity.smali',
+  'smali_classes9/com/facebook/offlineexperiment/internalsettings/OfflineExperimentPreferenceActivity.smali'
 )
 
 $targets = switch ($Level) {
@@ -104,8 +131,41 @@ $onCreateReplacement = @"
 .end method
 "@
 
+$a0FReplacement = @"
+.method public A0F(Landroid/os/Bundle;)V
+  .locals 0
+
+  invoke-super {p0, p1}, Lcom/facebook/base/activity/FbPreferenceActivity;->A0F(Landroid/os/Bundle;)V
+
+  invoke-virtual {p0}, Lcom/facebook/base/activity/FbPreferenceActivity;->finish()V
+
+  return-void
+.end method
+"@
+
+$aaOReplacement = @"
+.method public AaO()Ljava/lang/String;
+  .locals 1
+
+  const-string v0, ""
+
+  return-object v0
+.end method
+"@
+
+$a0HReplacement = @"
+.method public A0H(Lcom/facebook/msys/mca/Mailbox;)V
+  .locals 0
+
+  return-void
+.end method
+"@
+
 $a32Pattern = '(?s)\.method public A32\(Landroid/os/Bundle;\)V.*?\.end method'
 $onCreatePattern = '(?s)\.method public onCreate\(Landroid/os/Bundle;\)V.*?\.end method'
+$a0FPattern = '(?s)\.method public A0F\(Landroid/os/Bundle;\)V.*?\.end method'
+$aaOPattern = '(?s)\.method public AaO\(\)Ljava/lang/String;.*?\.end method'
+$a0HPattern = '(?s)\.method public A0H\(Lcom/facebook/msys/mca/Mailbox;\)V.*?\.end method'
 
 $patched = 0
 $alreadyPatched = 0
@@ -121,7 +181,7 @@ foreach ($rel in $targets) {
   }
 
   $content = Get-Content -Raw -Path $path
-  if ($content -match 'invoke-virtual \{p0\}, Lcom/facebook/base/activity/FbFragmentActivity;->finish\(\)V') {
+  if ($content -match '->finish\(\)V') {
     Write-Host "Already patched: $path" -ForegroundColor DarkYellow
     $alreadyPatched++
     continue
@@ -134,7 +194,19 @@ foreach ($rel in $targets) {
   }
 
   if ($updated -eq $content) {
-    Write-Warning "No patchable lifecycle method found (A32/onCreate): $path"
+    $updated = [regex]::Replace($content, $a0FPattern, $a0FReplacement, 1)
+  }
+
+  if ($updated -eq $content) {
+    $updated = [regex]::Replace($content, $aaOPattern, $aaOReplacement, 1)
+  }
+
+  if ($updated -eq $content) {
+    $updated = [regex]::Replace($content, $a0HPattern, $a0HReplacement, 1)
+  }
+
+  if ($updated -eq $content) {
+    Write-Warning "No patchable method found (A32/onCreate/A0F/AaO/A0H): $path"
     $unmatched++
     continue
   }
