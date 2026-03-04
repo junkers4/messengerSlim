@@ -19,6 +19,7 @@ Minimal, **local-only** workflow for experimenting with a slimmed Messenger buil
 - `scripts/apply-ai-cuts.ps1` – applies current AI entrypoint cut patch set to local smali.
 - `scripts/apply-nonai-cuts.ps1` – applies non-AI feature cut patch set (Reels/Marketplace/Stories/search extras).
 - `scripts/apply-battery-cuts.ps1` – applies explicit no-op patches for selected non-core background receivers/services.
+- `scripts/apply-chatonly-extreme.ps1` – applies strict chat-only cuts (extra UI entrypoints + non-core background handlers).
 - `config/features-to-disable.json` – your patch intent checklist (Stories, Reels, AI, etc.).
 
 ## Prerequisites (install locally)
@@ -55,6 +56,7 @@ If regular resource rebuild fails on this APK source, use `work/decompiled_nres`
 - `./scripts/apply-nonai-cuts.ps1 -Level extended`
 - `./scripts/apply-nonai-cuts.ps1 -Level aggressive`
 - `./scripts/apply-battery-cuts.ps1`
+- `./scripts/apply-chatonly-extreme.ps1`
 
 Then rebuild/sign from `work/decompiled_nres` (same local-only policy).
 
