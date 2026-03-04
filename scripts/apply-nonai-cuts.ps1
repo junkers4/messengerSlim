@@ -38,7 +38,17 @@ $extendedOnlyTargets = @(
 )
 
 $aggressiveOnlyTargets = @(
-  'smali_classes7/com/facebook/messaging/avatar/socialstickers/ui/settings/AvatarUsabilitySettingActivity.smali'
+  'smali_classes7/com/facebook/messaging/avatar/socialstickers/ui/settings/AvatarUsabilitySettingActivity.smali',
+  'smali_classes7/com/facebook/messaging/accountswitch/switchoneclick/SwitchOneClickActivity.smali',
+  'smali_classes10/com/facebook/messaging/accountswitch/SwitchAccountActivity.smali',
+  'smali_classes10/com/facebook/messaging/accountswitch/silent/SwitchAccountsSilentActivity.smali',
+  'smali_classes8/com/facebook/payments/p2p/messenger/core/prefs/PaymentsPreferenceActivity.smali',
+  'smali_classes8/com/facebook/payments/p2p/messenger/core/prefs/transactions/MessengerPayHistoryActivity.smali',
+  'smali_classes8/com/facebook/payments/p2p/awareness/PaymentAwarenessActivity.smali',
+  'smali_classes8/com/facebook/payments/p2p/messenger/core/prefs/method/verification/PaymentMethodVerificationHostActivity.smali',
+  'smali_classes8/com/facebook/payments/picker/PickerScreenActivity.smali',
+  'smali_classes8/com/facebook/payments/shipping/form/ShippingAddressActivity.smali',
+  'smali_classes8/com/facebook/payments/paymentmethods/cardform/CardFormActivity.smali'
 )
 
 $targets = switch ($Level) {
