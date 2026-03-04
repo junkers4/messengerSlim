@@ -40,6 +40,12 @@ $extendedOnlyTargets = @(
 $aggressiveOnlyTargets = @(
   'smali_classes7/com/facebook/messaging/avatar/socialstickers/ui/settings/AvatarUsabilitySettingActivity.smali',
   'smali_classes8/com/facebook/messaging/about/MessengerAboutLicenseActivity.smali',
+  'smali_classes7/com/facebook/messaging/memories/viewer/activity/MemoryViewerActivity.smali',
+  'smali_classes8/com/facebook/messaging/attribution/ChatHeadsReplyFlowHandlerActivity.smali',
+  'smali_classes7/com/facebook/messaging/users/username/EditUsernameActivity.smali',
+  'smali_classes8/com/facebook/messaging/users/displayname/ChangeDisplayNameSettingsActivity.smali',
+  'smali_classes9/com/facebook/nativetemplates/fb/shell/messenger/NativeTemplatesMessengerActivity.smali',
+  'smali_classes8/com/facebook/runtimepermissions/RequestPermissionsActivity.smali',
   'smali_classes7/com/facebook/messaging/accountswitch/switchoneclick/SwitchOneClickActivity.smali',
   'smali_classes10/com/facebook/messaging/accountswitch/SwitchAccountActivity.smali',
   'smali_classes10/com/facebook/messaging/accountswitch/silent/SwitchAccountsSilentActivity.smali',
