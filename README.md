@@ -17,6 +17,7 @@ Minimal, **local-only** workflow for experimenting with a slimmed Messenger buil
 - `scripts/decompile.ps1` – decompiles your local APK with apktool.
 - `scripts/rebuild-sign.ps1` – rebuilds + signs an APK (debug key by default).
 - `scripts/apply-ai-cuts.ps1` – applies current AI entrypoint cut patch set to local smali.
+- `scripts/apply-nonai-cuts.ps1` – applies non-AI feature cut patch set (Reels/Marketplace/Stories/search extras).
 - `config/features-to-disable.json` – your patch intent checklist (Stories, Reels, AI, etc.).
 
 ## Prerequisites (install locally)
@@ -49,6 +50,9 @@ If regular resource rebuild fails on this APK source, use `work/decompiled_nres`
 - `./scripts/apply-ai-cuts.ps1 -Level core`
 - `./scripts/apply-ai-cuts.ps1 -Level extended`
 - `./scripts/apply-ai-cuts.ps1 -Level aggressive`
+- `./scripts/apply-nonai-cuts.ps1 -Level core`
+- `./scripts/apply-nonai-cuts.ps1 -Level extended`
+- `./scripts/apply-nonai-cuts.ps1 -Level aggressive`
 
 Then rebuild/sign from `work/decompiled_nres` (same local-only policy).
 
