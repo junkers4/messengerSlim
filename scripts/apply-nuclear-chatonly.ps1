@@ -160,7 +160,19 @@ $uiTargets = @(
   'smali_classes3/com/facebook/messenger/intents/SameTaskIntentHandlerActivity.smali',
   'smali_classes3/com/facebook/messenger/intents/SecureSameTaskIntentHandlerActivity.smali',
   'smali_classes3/com/facebook/messenger/intents/SecureIntentHandlerActivity.smali',
-  'smali_classes3/com/facebook/messenger/intents/IntentHandlerActivity.smali'
+  'smali_classes3/com/facebook/messenger/intents/IntentHandlerActivity.smali',
+  # Meta AI / AI Bot entrypoints
+  'smali_classes6/com/facebook/messaging/aibot/launcher/activity/AiStudioFragmentActivity.smali',
+  'smali_classes6/com/facebook/messaging/aibot/launcher/activity/AiBotImmersiveThreadActivity.smali',
+  'smali_classes6/com/facebook/xapp/messaging/composer/aibot/discover/activity/AiBotDiscoverActivity.smali',
+  'smali_classes6/com/facebook/messaging/aibot/memory/activity/ManageAiMemorySettingsActivity.smali',
+  'smali_classes6/com/facebook/messaging/aibot/launcher/activity/AiStudioCreationFragmentActivity.smali',
+  'smali_classes6/com/facebook/messaging/aibot/launcher/activity/AiStudioProfileActivity.smali',
+  'smali_classes6/com/facebook/messaging/aibot/launcher/activity/AiStudioCharacterProfileCreationActivity.smali',
+  'smali_classes6/com/facebook/messaging/aibot/launcher/activity/AiStudioImmersiveThreadFirstBloksActivity.smali',
+  'smali_classes6/com/facebook/messaging/aibot/appsettingsui/MetaAiLookupSettingsActivity.smali',
+  'smali_classes6/com/facebook/messaging/aibot/botpicker/ugcbot/inthreadaibotediting/InThreadAiBotEditingActivity.smali',
+  'smali_classes6/com/facebook/messaging/aibot/rpg/ScenesRPGIntroActivity.smali'
 )
 
 $a32Replace = @"
@@ -329,7 +341,7 @@ Write-Host "Phase 2 done: Patched=$p2patched, Missing=$p2missing, Skipped=$p2ski
 # ════════════════════════════════════════════════════════════════════════
 Write-Host "`n═══ PHASE 3: Broad Background Sweep ═══" -ForegroundColor Magenta
 
-$bgPathRegex = '(background|notify|notification|push|mqtt|sync|upload|job|scheduler|alarm|directshare|wear|analytics|bugreport|keepalive|screencast|messengercar|fbnslite|oxygen|datatransport|systemalarm|systemjob|falco|nna|registration|chatheads|reels|montage|stories|sticker|marketplace|payments|rtc|calls|videocall|voip|camera|ar\\b|augmented|avatar|game|playground|memor|commerce|business|ads\\b|adunit|tracking|telemetry|logging|crashreport|errorreport|profiler|perf|debug|internalprefs|experiment|quickpromotion|survey|feedback|sso|accountkit|credential|appindex|deeplinking|shortcut|widget|bubble|pip\\b|floatingwindow|overlay|badge|jewel)'
+$bgPathRegex = '(background|notify|notification|push|mqtt|sync|upload|job|scheduler|alarm|directshare|wear|analytics|bugreport|keepalive|screencast|messengercar|fbnslite|oxygen|datatransport|systemalarm|systemjob|falco|nna|registration|chatheads|reels|montage|stories|sticker|marketplace|payments|rtc|calls|videocall|voip|camera|ar\\b|augmented|avatar|game|playground|memor|commerce|business|ads\\b|adunit|tracking|telemetry|logging|crashreport|errorreport|profiler|perf|debug|internalprefs|experiment|quickpromotion|survey|feedback|sso|accountkit|credential|appindex|deeplinking|shortcut|widget|bubble|pip\\b|floatingwindow|overlay|badge|jewel|aibot|metaai|aistudio|assistant)'
 
 $bgMethodSpecs = @(
   @{ Pattern = '(?s)(\.method(?![^\n]*abstract)[^\n]* A05\(Landroid/content/Context;Landroid/content/Intent;LX/0NL;\)V)\n.*?\.end method'; Replacement = "`$1`n    .locals 0`n`n    return-void`n.end method" },
@@ -373,7 +385,22 @@ Write-Host "`n═══ PHASE 4: Nuclear Activity Sweep ═══" -ForegroundCo
 
 # Whitelist: only these path patterns are allowed to survive
 $activityWhitelist = @(
-  'orca[\\/](auth|app|Fb|HomeTabs|Droidguard)',
+  # Third-party / framework base classes — MUST NEVER be patched
+  'androidx[\\/]',
+  'android[\\/]',
+  'com[\\/]google[\\/]',
+  'com[\\/]android[\\/]',
+  'com[\\/]spotify[\\/]',
+  'fx[\\/]thirdpartyoauth',
+  # Facebook base activity classes — MUST NEVER be patched
+  'base[\\/]activity[\\/]Delegating',
+  'orca[\\/](auth|app|Fb|HomeTabs|Droidguard|threadview)',
+  'messenger[\\/]neue[\\/]',
+  'messenger[\\/]intents[\\/]',
+  'resources[\\/]impl[\\/]Waiting',
+  'voltron[\\/]',
+  'checkpoint[\\/]',
+  'rtc[\\/](activities|incall)',
   'messaging[\\/](threadlist|threadview|inbox|composer|lite)',
   'messaging[\\/](model|msys|e2ee|sms|mms)',
   'messaging[\\/]app[\\/]',
@@ -584,6 +611,27 @@ Get-ChildItem -Path $base -Recurse -Filter '*.smali' | ForEach-Object {
 Write-Host "Phase 6 done: Providers neutralized=$p6, Whitelisted=$p6wl" -ForegroundColor Cyan
 
 # ════════════════════════════════════════════════════════════════════════
+# PHASE 7: Branding text replace (Messenger -> Spravaren in smali strings)
+# ════════════════════════════════════════════════════════════════════════
+Write-Host "`n═══ PHASE 7: Branding Replace (Messenger -> Spravaren) ═══" -ForegroundColor Magenta
+
+$p7files = 0
+$p7hits = 0
+Get-ChildItem -Path $base -Recurse -Filter '*.smali' | ForEach-Object {
+  $content = Get-Content -Raw -Path $_.FullName
+  if ($content -notmatch '"Messenger"') { return }
+
+  $updated = $content.Replace('"Messenger"', '"Spravaren"')
+  if ($updated -ne $content) {
+    $hits = ([regex]::Matches($content, '"Messenger"')).Count
+    $p7hits += $hits
+    Set-Content -Path $_.FullName -Value $updated -NoNewline
+    $p7files++
+  }
+}
+Write-Host "Phase 7 done: Files=$p7files, Replacements=$p7hits" -ForegroundColor Cyan
+
+# ════════════════════════════════════════════════════════════════════════
 # SUMMARY
 # ════════════════════════════════════════════════════════════════════════
 Write-Host "`n════════════════════════════════════════════" -ForegroundColor Yellow
@@ -594,4 +642,5 @@ Write-Host "Phase 3 (Background sweep): $p3files files, $p3methods methods" -For
 Write-Host "Phase 4 (Activity nuclear): $p4patched patched, $p4whitelisted whitelisted" -ForegroundColor Green
 Write-Host "Phase 5 (Svc/Rcv nuclear): Svc=$p5svc Rcv=$p5rcv" -ForegroundColor Green
 Write-Host "Phase 6 (Provider): $p6 neutralized" -ForegroundColor Green
+Write-Host "Phase 7 (Branding): $p7files files, $p7hits replacements" -ForegroundColor Green
 Write-Host "════════════════════════════════════════════" -ForegroundColor Yellow

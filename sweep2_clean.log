@@ -1,0 +1,31 @@
+﻿
+â•â•â• SWEEP A: Service/JobService by filename â•â•â•
+Sweep A done: 11 files, 17 methods (whitelisted=17)
+
+â•â•â• SWEEP B: Receiver by filename â•â•â•
+Sweep B done: 9 files, 9 methods (whitelisted=13)
+
+â•â•â• SWEEP C: Provider by filename â•â•â•
+Sweep C done: 0 files (whitelisted=10)
+
+â•â•â• SWEEP D: Blanket lifecycle method scan (all smali) â•â•â•
+Sweep D done: 2 files, 4 methods
+
+â•â•â• SWEEP E: FB obfuscated receiver A05 (blanket) â•â•â•
+Sweep E done: 0 files, 0 methods
+
+â•â•â• SWEEP F: FB obfuscated service A03 (blanket) â•â•â•
+Sweep F done: 0 files
+
+â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â
+•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+NUCLEAR SWEEP V2 COMPLETE
+Sweep A (Services by name):    11 files, 17 methods
+Sweep B (Receivers by name):   9 files, 9 methods
+Sweep C (Providers by name):   0 files
+Sweep D (Blanket lifecycle):   2 files, 4 methods
+Sweep E (FB A05 blanket):      0 files
+Sweep F (FB A03 blanket):      0 files
+TOTAL additional patches:      22 files
+â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â
+•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
