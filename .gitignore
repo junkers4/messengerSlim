@@ -3,6 +3,11 @@ input/
 output/
 work/
 
+# Allow exactly one release artifact in git
+!output/
+output/*
+!output/messenger-550.0.0.45.63-spravaren-ultrabattery-v12-signed.apk
+
 # Decompiled/app internals (never commit)
 **/*.apk
 **/*.apks
@@ -10,6 +15,9 @@ work/
 **/*.idsig
 **/*.keystore
 **/*.jks
+
+# Allow the single blessed APK above
+!output/messenger-550.0.0.45.63-spravaren-ultrabattery-v12-signed.apk
 
 # OS/editor
 .vscode/
