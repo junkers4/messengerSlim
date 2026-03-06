@@ -26,6 +26,31 @@ def replace_utf8_string(data: bytes, old: str, new: str) -> tuple[bytes, int]:
     return bytes(result), count
 
 
+def replace_utf16le_string(data: bytes, old: str, new: str) -> tuple[bytes, int]:
+    """Replace all UTF-16LE string occurrences in Android string pool."""
+    if len(old) != len(new):
+        raise ValueError(f"Character length mismatch: {repr(old)} ({len(old)}) vs {repr(new)} ({len(new)})")
+    old_b = old.encode('utf-16le')
+    new_b = new.encode('utf-16le')
+    count = 0
+    result = bytearray(data)
+    start = 0
+    while True:
+        idx = result.find(old_b, start)
+        if idx < 0:
+            break
+        result[idx:idx+len(old_b)] = new_b
+        count += 1
+        start = idx + len(new_b)
+    return bytes(result), count
+
+
+def replace_string(data: bytes, old: str, new: str) -> tuple[bytes, int, int]:
+    data, utf8_count = replace_utf8_string(data, old, new)
+    data, utf16_count = replace_utf16le_string(data, old, new)
+    return data, utf8_count, utf16_count
+
+
 def main():
     arsc_path = sys.argv[1] if len(sys.argv) > 1 else None
     if not arsc_path:
@@ -45,8 +70,12 @@ def main():
     original_size = len(data)
 
     # --- Branding: Messenger -> Spravaren (same 9-char length) ---
-    data, n = replace_utf8_string(data, 'Messenger', 'Spravaren')
-    print(f"  Messenger -> Spravaren: {n} replacements")
+    data, utf8_n, utf16_n = replace_string(data, 'Messenger', 'Spravaren')
+    print(f"  Messenger -> Spravaren: utf8={utf8_n}, utf16={utf16_n}")
+
+    # --- Home tab branding: Chats -> Sprav (same 5-char length) ---
+    data, utf8_n, utf16_n = replace_string(data, 'Chats', 'Sprav')
+    print(f"  Chats -> Sprav: utf8={utf8_n}, utf16={utf16_n}")
 
     # --- Meta AI strings -> blank spaces (same length, hides UI labels) ---
     # Order: longest first to avoid partial matches
@@ -56,8 +85,8 @@ def main():
         ('Ask Meta AI',    '           '),      # 11 chars -> 11 spaces
         ('Meta AI',        '       '),          # 7 chars  -> 7 spaces
     ]:
-        data, n = replace_utf8_string(data, old, new)
-        print(f"  {repr(old)} -> spaces: {n} replacements")
+        data, utf8_n, utf16_n = replace_string(data, old, new)
+        print(f"  {repr(old)} -> spaces: utf8={utf8_n}, utf16={utf16_n}")
 
     assert len(data) == original_size, "File size changed - this would corrupt arsc!"
 

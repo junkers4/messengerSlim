@@ -42,6 +42,24 @@ $voidIntentNoop = @"
 .end method
 "@
 
+$voidIntentNoopA09 = @"
+.method public A09(Landroid/content/Intent;)V
+  .locals 0
+
+  return-void
+.end method
+"@
+
+$mqttNoOpDelegate = @"
+.method public A0G()Ljava/lang/String;
+  .locals 1
+
+  const-string v0, "com.facebook.mqtt.service.NoOpDelegate"
+
+  return-object v0
+.end method
+"@
+
 $listNoop = @"
 .method public onGetChooserTargets(Landroid/content/ComponentName;Landroid/content/IntentFilter;)Ljava/util/List;
     .locals 1
@@ -171,6 +189,7 @@ $rules = @(
   @{ Path = 'smali_classes7/com/facebook/messaging/directshare/DirectShareChooserTargetService.smali'; Header = '.method public onGetChooserTargets(Landroid/content/ComponentName;Landroid/content/IntentFilter;)Ljava/util/List;'; Replacement = $listNoop },
   @{ Path = 'smali_classes10/androidx/sharetarget/ChooserTargetServiceCompat.smali'; Header = '.method public onGetChooserTargets(Landroid/content/ComponentName;Landroid/content/IntentFilter;)Ljava/util/List;'; Replacement = $listNoop },
   @{ Path = 'smali/com/facebook/mqttlite/MqttService.smali'; Header = '.method public onStartCommand(Landroid/content/Intent;II)I'; Replacement = $startCommandNoop },
+  @{ Path = 'smali_classes2/com/facebook/mqtt/service/MqttServiceV2.smali'; Header = '.method public A0G()Ljava/lang/String;'; Replacement = $mqttNoOpDelegate },
   @{ Path = 'smali/com/facebook/push/fbnslite/PushSdkFbnsReceiverService.smali'; Header = '.method public onStartCommand(Landroid/content/Intent;II)I'; Replacement = $startCommandNoop },
   @{ Path = 'smali_classes10/androidx/work/impl/background/systemalarm/SystemAlarmService.smali'; Header = '.method public onStartCommand(Landroid/content/Intent;II)I'; Replacement = $startCommandNoop },
   @{ Path = 'smali_classes10/com/facebook/advancedcryptotransport/api/impl/service/AdvancedCryptoTransportNotificationService.smali'; Header = '.method public onBind(Landroid/content/Intent;)Landroid/os/IBinder;'; Replacement = $binderNoopPublic },
@@ -212,6 +231,8 @@ $rules = @(
   @{ Path = 'smali_classes10/com/google/android/gms/analytics/AnalyticsService.smali'; Header = '.method public final onBind(Landroid/content/Intent;)Landroid/os/IBinder;'; Replacement = $binderNoop },
   @{ Path = 'smali_classes10/com/google/android/gms/analytics/AnalyticsService.smali'; Header = '.method public final onStartCommand(Landroid/content/Intent;II)I'; Replacement = $startCommandNoopFinal },
   @{ Path = 'smali_classes3/com/facebook/wearlistener/DataLayerListenerService.smali'; Header = '.method public final onBind(Landroid/content/Intent;)Landroid/os/IBinder;'; Replacement = $binderNoop },
+  @{ Path = 'smali_classes3/com/facebook/push/mqtt/service/MqttPushHelperService.smali'; Header = '.method public A09(Landroid/content/Intent;)V'; Replacement = $voidIntentNoopA09 },
+  @{ Path = 'smali_classes3/com/facebook/messaging/livelocation/bindings/MessengerLiveLocationBooterService.smali'; Header = '.method public A09(Landroid/content/Intent;)V'; Replacement = $voidIntentNoopA09 },
   @{ Path = 'smali_classes10/com/meta/wearable/acdc/sdk/service/ACDCRegistrationService.smali'; Header = '.method public A01()Landroid/os/IBinder;'; Replacement = $binderNoopA01 },
   @{ Path = 'smali_classes10/com/meta/wearable/acdc/sdk/service/ACDCRegistrationService.smali'; Header = '.method public A04()V'; Replacement = $voidA04Noop }
 )
