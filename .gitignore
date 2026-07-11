@@ -23,3 +23,7 @@ output/*
 .vscode/
 .DS_Store
 Thumbs.db
+
+# keep repo root clean (scratch logs/errs)
+/*.log
+/*.err
