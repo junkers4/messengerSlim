@@ -20,9 +20,15 @@ import hev.htproxy.TProxyService;
 
 /**
  * VpnService injektovany do Messengera. Smeruje vlastnu appku (com.facebook.orca) cez Tor.
- * Slucku (Torov vlastny traffic) rozbija tym, ze IP guard uzlov vynecha z trass tunela.
  *
- *   Messenger -> tun (0.0.0.0/0 OKREM guard IP) -> hev -> Tor SOCKS 127.0.0.1:9050 -> guard(priamo) -> exit
+ * Slucku (Tor v rovnakom UID) rozbija guard-exclusion: IP guard uzlov sa vynechaju z trass
+ * tunela, takze Torov vlastny traffic ide priamo a Messenger tunelom.
+ *
+ * KILL-SWITCH (fail-closed):
+ *  - pri starte sa hned postavi tun s vynechanim MINULE znamych guardov -> Messenger nema
+ *    siet, kym Tor nie je hotovy (ziadny leak). Ak bootstrap stalluje (novy guard), na
+ *    chvilu sa siet otvori, nech Tor dobehne.
+ *  - watchdog: ak Tor spadne pocas behu, Messenger sa zablackholuje (fail-closed), nie leak.
  */
 public class OrcaTorVpnService extends VpnService {
 
@@ -54,45 +60,97 @@ public class OrcaTorVpnService extends VpnService {
 
     private void startAll() {
         try {
-            startForeground(NOTIF_ID, notif("Spustam Tor..."));
-
+            startForeground(NOTIF_ID, notif());
             tor = new TorController(this, SOCKS, DNSP);
-            tor.startBlocking();
 
-            // Zisti guard IP (par pokusov, kym Tor otvori OR spojenie).
-            List<Long> guards = tor.guardIps();
-            for (int i = 0; i < 8 && guards.isEmpty(); i++) {
-                Thread.sleep(500); guards = tor.guardIps();
+            // 1) FAIL-CLOSED: postav tun s vynechanim MINULE znamych guardov. Messenger je
+            //    zachyteny (bez hev = bez siete), ale Torov guard-traffic prejde vynimkou.
+            List<Long> cached = tor.loadGuards();
+            boolean failClosed = false;
+            if (!cached.isEmpty()) {
+                tun = buildTun(cached);
+                if (tun != null) { failClosed = true; Log.i(TAG, "Fail-closed pri starte (cache guardov=" + cached.size() + ")"); }
             }
+
+            // 2) Spusti Tor.
+            tor.startAsync();
+
+            // 3) Cakaj na bootstrap. Ak fail-closed a stalluje (novy guard/stary consensus),
+            //    docasne otvor siet nech Tor dobehne.
+            if (!tor.waitBootstrapped(12_000)) {
+                if (failClosed && tun != null) {
+                    Log.i(TAG, "Bootstrap stalluje -> docasne otvaram siet pre Tor");
+                    ParcelFileDescriptor tmp = tun; tun = null;
+                    try { tmp.close(); } catch (Exception ignored) {}
+                    failClosed = false;
+                }
+                if (!tor.waitBootstrapped(120_000)) {
+                    Log.e(TAG, "Tor bootstrap zlyhal"); stopAll(); stopSelf(); return;
+                }
+            }
+
+            // 4) Zisti aktualne guardy a uloz ich pre buduci fail-closed start.
+            List<Long> guards = tor.guardIps();
+            for (int i = 0; i < 8 && guards.isEmpty(); i++) { Thread.sleep(500); guards = tor.guardIps(); }
             Log.i(TAG, "Guard IP na vynechanie z tunela: " + guards.size());
+            if (!guards.isEmpty()) tor.saveGuards(guards);
 
-            List<RouteUtil.Route> routes = RouteUtil.allExcept(guards);
+            // 5) Finalny tun s aktualnou guard-exclusion (atomicky nahradi).
+            ParcelFileDescriptor newTun = buildTun(guards);
+            if (newTun == null) { Log.e(TAG, "final establish=null"); stopAll(); stopSelf(); return; }
+            ParcelFileDescriptor old = tun; tun = newTun;
+            try { if (old != null) old.close(); } catch (Exception ignored) {}
 
-            Builder b = new Builder();
-            b.setSession("Messenger Tor");
-            b.setMtu(MTU);
-            b.addAddress(TUN4, 32);
-            for (RouteUtil.Route r : routes) b.addRoute(r.address, r.prefix);
-            b.addAddress(TUN6, 128);
-            b.addRoute("::", 0);
-            b.addDnsServer(MAPDNS);
-            try { b.addAllowedApplication(SELF_PKG); }
-            catch (PackageManager.NameNotFoundException e) { Log.e(TAG, "self pkg?", e); }
-
-            tun = b.establish();
-            if (tun == null) { Log.e(TAG, "establish=null"); stopAll(); stopSelf(); return; }
-
+            // 6) hev: pumpuj tun <-> Tor SOCKS.
             File cfg = writeHev();
             tproxy.TProxyStartService(cfg.getAbsolutePath(), tun.getFd());
             tproxyRunning = true;
 
             READY = true;
-            updateNotif("Messenger ide cez Tor");
             Log.i(TAG, "Messenger je teraz smerovany cez Tor.");
+            startWatchdog();
         } catch (Throwable t) {
             Log.e(TAG, "start zlyhal", t);
             stopAll(); stopSelf();
         }
+    }
+
+    /** Ak Tor spadne pocas behu -> zablackholuj Messenger (fail-closed), nie leak. */
+    private void startWatchdog() {
+        Thread w = new Thread(() -> {
+            while (running) {
+                try { Thread.sleep(3000); } catch (InterruptedException e) { return; }
+                if (running && tor != null && !tor.isAlive()) {
+                    Log.w(TAG, "Tor spadol -> fail-closed blackhole (Messenger bez siete)");
+                    if (tproxyRunning) { try { tproxy.TProxyStopService(); } catch (Throwable ignored) {} tproxyRunning = false; }
+                    ParcelFileDescriptor bh = buildTun(null); // route-all, bez hev = blackhole
+                    if (bh != null) { ParcelFileDescriptor old = tun; tun = bh; try { if (old != null) old.close(); } catch (Exception ignored) {} }
+                    READY = false;
+                    running = false; // umozni restart pri dalsom otvoreni Messengera
+                    return;
+                }
+            }
+        }, "tor-watchdog");
+        w.setDaemon(true); w.start();
+    }
+
+    /** Postavi tun pre Messenger. guards==null/prazdne => vsetky trasy (blackhole ked bez hev). */
+    private ParcelFileDescriptor buildTun(List<Long> guards) {
+        Builder b = new Builder();
+        b.setSession("Spravaren");
+        b.setMtu(MTU);
+        b.addAddress(TUN4, 32);
+        if (guards == null || guards.isEmpty()) {
+            b.addRoute("0.0.0.0", 0);
+        } else {
+            for (RouteUtil.Route r : RouteUtil.allExcept(guards)) b.addRoute(r.address, r.prefix);
+        }
+        b.addAddress(TUN6, 128);
+        b.addRoute("::", 0);
+        b.addDnsServer(MAPDNS);
+        try { b.addAllowedApplication(SELF_PKG); }
+        catch (PackageManager.NameNotFoundException e) { Log.e(TAG, "self pkg?", e); }
+        return b.establish();
     }
 
     private File writeHev() throws Exception {
@@ -118,14 +176,19 @@ public class OrcaTorVpnService extends VpnService {
     @Override public void onDestroy() { stopAll(); super.onDestroy(); }
     @Override public void onRevoke() { stopAll(); stopSelf(); super.onRevoke(); }
 
-    private Notification notif(String txt) {
+    private Notification notif() {
         NotificationManager nm = getSystemService(NotificationManager.class);
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
-            nm.createNotificationChannel(new NotificationChannel(CHANNEL_ID, "Tor", NotificationManager.IMPORTANCE_LOW));
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            NotificationChannel ch = new NotificationChannel(
+                    CHANNEL_ID, "Spravaren", NotificationManager.IMPORTANCE_MIN);
+            ch.setShowBadge(false);
+            nm.createNotificationChannel(ch);
+        }
         Notification.Builder nb = (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
                 ? new Notification.Builder(this, CHANNEL_ID) : new Notification.Builder(this);
-        return nb.setContentTitle("Messenger cez Tor").setContentText(txt)
-                .setSmallIcon(android.R.drawable.ic_lock_lock).setOngoing(true).build();
+        return nb.setContentTitle("Spravaren")
+                .setSmallIcon(android.R.drawable.stat_notify_sync)
+                .setOngoing(true)
+                .build();
     }
-    private void updateNotif(String t) { getSystemService(NotificationManager.class).notify(NOTIF_ID, notif(t)); }
 }

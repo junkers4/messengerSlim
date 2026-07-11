@@ -17,11 +17,11 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Spusti bundlovanu Tor binarku (libTor.so), caka na bootstrap 100% a potom zisti
- * IP guard uzlov (Torove priame OR spojenia) cez ControlPort — tie sa vynechaju z tunela,
- * aby sa Torov vlastny traffic nezacyklil.
+ * Spusti bundlovanu Tor binarku (libTor.so), sleduje bootstrap a zisti IP guard uzlov
+ * cez ControlPort. Guardy sa vynechaju z tunela, aby sa Torov vlastny traffic nezacyklil.
  *
- * ClientUseIPv6 0 => guardy su IPv4, takze IPv6 sa da bezpecne cele routovat do tunela.
+ * Bootstrap bezi asynchronne (percenta v bootstrapPercent), aby VpnService vedel medzitym
+ * fail-closed drzat / pustit tunel.
  */
 public class TorController {
 
@@ -30,6 +30,10 @@ public class TorController {
     private final int socksPort, dnsPort;
     private final int ctrlPort = 9051;
     private Process torProcess;
+
+    public volatile int bootstrapPercent = 0;
+    public volatile boolean bootstrapped = false;
+    public volatile boolean died = false;
 
     public TorController(Context ctx, int socksPort, int dnsPort) {
         this.ctx = ctx.getApplicationContext();
@@ -43,6 +47,7 @@ public class TorController {
 
     private File dataDir() { File d = new File(ctx.getFilesDir(), "tor"); d.mkdirs(); return d; }
     private File pidFile() { return new File(dataDir(), "tor.pid"); }
+    private File guardCache() { return new File(dataDir(), "guards.txt"); }
 
     private File writeTorrc() throws Exception {
         File torrc = new File(dataDir(), "torrc");
@@ -64,7 +69,8 @@ public class TorController {
         return torrc;
     }
 
-    public void startBlocking() throws Exception {
+    /** Spusti Tor a citaj jeho log na pozadi; aktualizuje bootstrapPercent/bootstrapped/died. */
+    public void startAsync() throws Exception {
         killStaleTor();
         File torrc = writeTorrc();
         ProcessBuilder pb = new ProcessBuilder(torBinaryPath(), "-f", torrc.getAbsolutePath());
@@ -72,30 +78,43 @@ public class TorController {
         pb.directory(ctx.getFilesDir());
         torProcess = pb.start();
 
-        InputStream in = torProcess.getInputStream();
-        BufferedReader r = new BufferedReader(new InputStreamReader(in, StandardCharsets.UTF_8));
-        String line;
-        long deadline = System.currentTimeMillis() + 120_000;
-        while ((line = r.readLine()) != null) {
-            Log.i(TAG, line);
-            if (line.contains("Bootstrapped 100%")) { drainAsync(r); return; }
-            if (System.currentTimeMillis() > deadline)
-                throw new IllegalStateException("Tor bootstrap timeout");
-        }
-        throw new IllegalStateException("Tor skoncil pred bootstrapom");
-    }
-
-    private void drainAsync(BufferedReader r) {
         Thread t = new Thread(() -> {
-            try { String l; while ((l = r.readLine()) != null) Log.d(TAG, l); } catch (Exception ignored) {}
+            try (BufferedReader r = new BufferedReader(new InputStreamReader(
+                    torProcess.getInputStream(), StandardCharsets.UTF_8))) {
+                String line;
+                while ((line = r.readLine()) != null) {
+                    Log.i(TAG, line);
+                    int idx = line.indexOf("Bootstrapped ");
+                    if (idx >= 0) {
+                        try {
+                            String rest = line.substring(idx + 13);
+                            int pct = Integer.parseInt(rest.substring(0, rest.indexOf('%')).trim());
+                            bootstrapPercent = pct;
+                            if (pct >= 100) bootstrapped = true;
+                        } catch (Exception ignored) {}
+                    }
+                }
+            } catch (Exception ignored) {}
+            died = true;
         }, "tor-log");
-        t.setDaemon(true); t.start();
+        t.setDaemon(true);
+        t.start();
     }
 
-    /**
-     * IP guard uzlov cez Tor ControlPort (spolahlive; /proc ineho procesu blokuje hidepid).
-     * orconn-status -> fingerprinty otvorenych OR spojeni; ns/id/<fp> -> ich IP.
-     */
+    /** Caka na bootstrap 100% do timeoutMs. Vrati true ak uspech. */
+    public boolean waitBootstrapped(long timeoutMs) {
+        long end = System.currentTimeMillis() + timeoutMs;
+        while (System.currentTimeMillis() < end) {
+            if (bootstrapped) return true;
+            if (died) return false;
+            try { Thread.sleep(200); } catch (InterruptedException e) { return false; }
+        }
+        return bootstrapped;
+    }
+
+    public boolean isAlive() { return torProcess != null && torProcess.isAlive() && !died; }
+
+    /** IP guard uzlov cez ControlPort (orconn-status -> ns/id/<fp>). */
     public List<Long> guardIps() {
         List<Long> res = new ArrayList<>();
         try (Socket s = new Socket()) {
@@ -110,7 +129,6 @@ public class TorController {
             String r = in.readLine();
             if (r == null || !r.startsWith("250")) { Log.w(TAG, "ctrl auth: " + r); return res; }
 
-            // fingerprinty otvorenych OR spojeni
             List<String> fps = new ArrayList<>();
             send(o, "GETINFO orconn-status\r\n");
             String line;
@@ -119,7 +137,7 @@ public class TorController {
                 int i = line.indexOf('$');
                 if (i >= 0 && line.length() >= i + 41) fps.add(line.substring(i + 1, i + 41));
             }
-            in.readLine(); // "250 OK"
+            in.readLine();
 
             for (String fp : fps) {
                 send(o, "GETINFO ns/id/$" + fp + "\r\n");
@@ -133,10 +151,35 @@ public class TorController {
                         }
                     }
                 }
-                in.readLine(); // "250 OK"
+                in.readLine();
             }
             send(o, "QUIT\r\n");
         } catch (Throwable t) { Log.w(TAG, "guardIps ctrl", t); }
+        return res;
+    }
+
+    /** Ulozi guardy pre buduci fail-closed start. */
+    public void saveGuards(List<Long> guards) {
+        try (OutputStream os = new FileOutputStream(guardCache())) {
+            StringBuilder sb = new StringBuilder();
+            for (long g : guards) sb.append(g).append("\n");
+            os.write(sb.toString().getBytes(StandardCharsets.UTF_8));
+        } catch (Exception e) { Log.w(TAG, "saveGuards", e); }
+    }
+
+    /** Nacita minule guardy (na okamzity fail-closed pri starte). */
+    public List<Long> loadGuards() {
+        List<Long> res = new ArrayList<>();
+        File f = guardCache();
+        if (!f.exists()) return res;
+        try (BufferedReader br = new BufferedReader(new InputStreamReader(
+                new FileInputStream(f), StandardCharsets.UTF_8))) {
+            String l;
+            while ((l = br.readLine()) != null) {
+                l = l.trim(); if (l.isEmpty()) continue;
+                try { res.add(Long.parseLong(l)); } catch (Exception ignored) {}
+            }
+        } catch (Exception ignored) {}
         return res;
     }
 
