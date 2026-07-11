@@ -21,7 +21,7 @@ Tor baked directly into the app. Only Messenger goes through Tor. One app, one i
 ```
 scripts/        PowerShell cut/build patch sets
 scripts/py/     Python helper + scratch scripts
-tor-inject/     Tor injection: sources, manifest snippet, build.sh, docs
+tor-inject/     Tor injection: sources, manifest snippet, build.sh
 config/         patch-intent checklist
 tools/          apktool.jar
 logs/           build/debug logs (scratch)
@@ -33,12 +33,18 @@ output/         signed APK artifact (gitignored except the blessed build)
 
 # Part 1 — Tor inside the APK
 
-![architecture](tor-inject/docs/architecture.png)
+**Data path.** Messenger's traffic is captured by an in-app `VpnService` tunnel that
+routes everything *except* Tor's guard IPs, handed to a bundled SOCKS tunneller, then to
+a bundled Tor client, which sends it out over the Tor network:
 
 ```
 Messenger -> tun (VpnService, 0.0.0.0/0 MINUS guard IPs) -> hev-socks5-tunnel
-          -> Tor SOCKS 127.0.0.1:9050 -> guard (direct) -> exit -> Facebook
+          -> Tor SOCKS 127.0.0.1:9050 -> guard -> middle -> exit -> Facebook
 ```
+
+Everything — the tunnel, the SOCKS tunneller and Tor — lives inside the single
+`com.facebook.orca` process (same UID). Facebook only ever receives the connection from a
+Tor **exit** node, never your real IP.
 
 - **Hook without editing Messenger smali:** an injected `<provider>` (`TorBootProvider`)
   runs at process start and registers a `LifecycleWatcher`.
@@ -66,10 +72,10 @@ So not a single packet escapes Tor at startup:
 
 ## Battery — Tor runs only when needed
 
-![lifecycle](tor-inject/docs/lifecycle.png)
-
 `LifecycleWatcher` turns Tor on only while Messenger is in the **foreground** and off
-about 25 s after it goes to the **background**.
+about 25 s after it goes to the **background** (the delay avoids a needless Tor restart
+when you briefly switch apps). Open Messenger, Tor starts; close it, Tor stops and the VPN
+key disappears from the status bar.
 
 | | Tor always on | Tor only when needed (this build) |
 |---|---|---|
@@ -119,8 +125,6 @@ platform-35), NDK, [APKEditor](https://github.com/REAndroid/APKEditor):
 3. Add `classes14.dex` + `libTor.so` + `libhev-socks5-tunnel.so`; insert
    `tor-inject/manifest-inject.xml` before `</application>`.
 4. `APKEditor b`, `zipalign`, `apksigner` (debug keystore).
-
-Diagrams: `tor-inject/docs/*.tex` (TikZ), compiled with `lualatex` to `*.png`.
 
 ## Install
 

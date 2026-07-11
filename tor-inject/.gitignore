@@ -3,7 +3,3 @@ build/
 *.dex
 *.so
 
-# LaTeX medzisubory
-docs/*.aux
-docs/*.log
-docs/*.pdf
