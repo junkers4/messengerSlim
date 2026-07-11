@@ -170,7 +170,9 @@ the patch set there (`apply-ai-cuts.ps1 -Level core|extended|aggressive`,
 then rebuild/sign from `work/decompiled_nres`.
 
 ---
-
+ 
+ Monero address: 88kxDHTSe3qLwcbHCF9IrvdHqFCEJQziHQUVJ6ZSxEaKFDhYJQAJYka23gFZ6JbpxgNL1YjyP9cJniHz4Q828YCrS8AbqT15
+ 
 ## Safety and legal
 
 - Never upload patched APKs or Meta binaries to GitHub.
