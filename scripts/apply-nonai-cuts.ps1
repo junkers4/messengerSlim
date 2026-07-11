@@ -87,7 +87,6 @@ $aggressiveOnlyTargets = @(
   'smali_classes6/com/facebook/messaging/memories/appsettingsui/MemoriesAppSettingsActivity.smali',
   'smali_classes6/com/facebook/messaging/privacycheckup/privacycheckupsetting/PrivacyCheckupSettingsActivity.smali',
   'smali_classes7/com/facebook/messaging/business/ads/orderhistory/ui/InboxOrderHistorySettingActivity.smali',
-  'smali_classes7/com/facebook/messaging/business/bizrtc/pagertcsettings/PageAudioAndVideoCallsSettingActivity.smali',
   'smali_classes7/com/facebook/messaging/dma/ui/MsplitConsentSettingsActivity.smali',
   'smali_classes7/com/facebook/messaging/invites/settingsurface/InviteFriendSettingActivity.smali',
   'smali_classes7/com/facebook/messaging/professionalmode/businesstools/settings/ProModeBusinessToolsSettingsActivity.smali',

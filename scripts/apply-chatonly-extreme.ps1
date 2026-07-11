@@ -104,9 +104,7 @@ $a04VoidNoop = @"
 "@
 
 $activityTargets = @(
-  'smali_classes3/com/facebook/rtc/activities/CallPermissionsActivity.smali',
-  'smali_classes5/com/facebook/rtc/activities/ZeroRatingActivity.smali',
-  'smali_classes7/com/facebook/rtc/activities/integrityprecall/MinorSafetyNoticeActivity.smali',
+  # RTC (hovory) NECHANE ZAPNUTE - CallPermissionsActivity/ZeroRatingActivity/MinorSafetyNoticeActivity
   'smali_classes8/com/facebook/messenger/intents/ShareIntentHandler.smali',
   'smali_classes8/com/facebook/messenger/intents/MediaEditShareIntentHandler.smali',
   'smali_classes8/com/facebook/messaging/sharing/ShareLauncherActivity.smali',

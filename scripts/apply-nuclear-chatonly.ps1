@@ -146,9 +146,7 @@ $uiTargets = @(
   'smali_classes8/com/facebook/zero/zerobalance/ui/AutoflexSettingsActivity.smali',
   'smali_classes9/com/facebook/offlineexperiment/internalsettings/OfflineExperimentPreferenceActivity.smali',
   # Chat-only extreme additions
-  'smali_classes3/com/facebook/rtc/activities/CallPermissionsActivity.smali',
-  'smali_classes5/com/facebook/rtc/activities/ZeroRatingActivity.smali',
-  'smali_classes7/com/facebook/rtc/activities/integrityprecall/MinorSafetyNoticeActivity.smali',
+  # RTC (hovory) NECHANE ZAPNUTE - CallPermissionsActivity/ZeroRatingActivity/MinorSafetyNoticeActivity
   'smali_classes8/com/facebook/messenger/intents/ShareIntentHandler.smali',
   'smali_classes8/com/facebook/messenger/intents/MediaEditShareIntentHandler.smali',
   'smali_classes8/com/facebook/messaging/sharing/ShareLauncherActivity.smali',
@@ -341,7 +339,7 @@ Write-Host "Phase 2 done: Patched=$p2patched, Missing=$p2missing, Skipped=$p2ski
 # ════════════════════════════════════════════════════════════════════════
 Write-Host "`n═══ PHASE 3: Broad Background Sweep ═══" -ForegroundColor Magenta
 
-$bgPathRegex = '(background|notify|notification|push|mqtt|sync|upload|job|scheduler|alarm|directshare|wear|analytics|bugreport|keepalive|screencast|messengercar|fbnslite|oxygen|datatransport|systemalarm|systemjob|falco|nna|registration|chatheads|reels|montage|stories|sticker|marketplace|payments|rtc|calls|videocall|voip|camera|ar\\b|augmented|avatar|game|playground|memor|commerce|business|ads\\b|adunit|tracking|telemetry|logging|crashreport|errorreport|profiler|perf|debug|internalprefs|experiment|quickpromotion|survey|feedback|sso|accountkit|credential|appindex|deeplinking|shortcut|widget|bubble|pip\\b|floatingwindow|overlay|badge|jewel|aibot|metaai|aistudio|assistant)'
+$bgPathRegex = '(background|notify|notification|push|mqtt|sync|upload|job|scheduler|alarm|directshare|wear|analytics|bugreport|keepalive|screencast|messengercar|fbnslite|oxygen|datatransport|systemalarm|systemjob|falco|nna|registration|chatheads|reels|montage|stories|sticker|marketplace|payments|camera|ar\\b|augmented|avatar|game|playground|memor|commerce|business|ads\\b|adunit|tracking|telemetry|logging|crashreport|errorreport|profiler|perf|debug|internalprefs|experiment|quickpromotion|survey|feedback|sso|accountkit|credential|appindex|deeplinking|shortcut|widget|bubble|pip\\b|floatingwindow|overlay|badge|jewel|aibot|metaai|aistudio|assistant)'
 
 $bgMethodSpecs = @(
   @{ Pattern = '(?s)(\.method(?![^\n]*abstract)[^\n]* A05\(Landroid/content/Context;Landroid/content/Intent;LX/0NL;\)V)\n.*?\.end method'; Replacement = "`$1`n    .locals 0`n`n    return-void`n.end method" },
@@ -359,7 +357,7 @@ $bgMethodSpecs = @(
 $p3files = 0
 $p3methods = 0
 Get-ChildItem -Path $base -Recurse -Filter '*.smali' | Where-Object {
-  $_.FullName -match $bgPathRegex
+  $_.FullName -match $bgPathRegex -and $_.FullName -notmatch 'rtc[\\/]' -and $_.FullName -notmatch 'FbnsLiteRtc'
 } | ForEach-Object {
   $content = Get-Content -Raw -Path $_.FullName
   $changed = $false
@@ -503,6 +501,9 @@ Write-Host "`n═══ PHASE 5: Nuclear Service/Receiver Sweep ═══" -Fore
 
 # Service whitelist: only keep absolute minimum
 $serviceWhitelist = @(
+  # RTC (hovory) - nechaj zit vsetky call sluzby/receivery + prichadzajuci-hovor FBNS push
+  'rtc[\\/]',
+  'push[\\/]fbnslite[\\/]FbnsLiteRtc',
   'messaging[\\/](msys|e2ee|sms|mms)',
   'messaging[\\/]app[\\/]',
   'messenger[\\/]app[\\/]',

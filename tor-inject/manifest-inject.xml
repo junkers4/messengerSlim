@@ -1,0 +1,26 @@
+<!--
+  Tieto 3 komponenty vloz PRED </application> do dekompilovaneho AndroidManifest.xml
+  Messengera (com.facebook.orca). Vsetky potrebne permissiony (INTERNET,
+  FOREGROUND_SERVICE, FOREGROUND_SERVICE_SPECIAL_USE, POST_NOTIFICATIONS) uz
+  Messenger v manifeste ma.
+
+  Hook: <provider> onCreate bezi pri starte procesu Messengera a zaregistruje
+  LifecycleWatcher -> Tor VPN sa zapne ked je Messenger v popredi, vypne na pozadi.
+-->
+<service android:name="com.messengerslim.tor.OrcaTorVpnService"
+         android:exported="false"
+         android:permission="android.permission.BIND_VPN_SERVICE"
+         android:foregroundServiceType="specialUse">
+  <intent-filter>
+    <action android:name="android.net.VpnService"/>
+  </intent-filter>
+  <property android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+            android:value="Tor tunnel for Messenger"/>
+</service>
+<activity android:name="com.messengerslim.tor.ConsentActivity"
+          android:exported="false"
+          android:theme="@android:style/Theme.Translucent.NoTitleBar"/>
+<provider android:name="com.messengerslim.tor.TorBootProvider"
+          android:authorities="com.facebook.orca.torboot"
+          android:exported="false"
+          android:initOrder="2147483647"/>
