@@ -105,8 +105,8 @@ Trade-off: because Tor stops on close, messages arrive only once you open Messen
 
 | | IP | Location |
 |---|---|---|
-| Real network (no Tor) | `[redacted-ip]` | [redacted-location] |
-| What Facebook sees | `[redacted-ip]` (IsTor:true) | New York, USA |
+| Real network (no Tor) | *your real IP* | *your home location* |
+| What Facebook sees | a Tor exit (`IsTor:true`) | some other country |
 
 Messenger connects **only to `127.0.0.1:9050` (Tor)** — no direct Facebook connections.
 Meta sees the Tor exit, not you.
