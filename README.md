@@ -101,19 +101,6 @@ Trade-off: because Tor stops on close, messages arrive only once you open Messen
 (tor-expert-bundle), `libhev-socks5-tunnel.so` (NDK build of
 [hev-socks5-tunnel](https://github.com/heiher/hev-socks5-tunnel)).
 
-## Verified on device (Pixel 9a)
-
-| | IP | Location |
-|---|---|---|
-| Real network (no Tor) | *your real IP* | *your home location* |
-| What Facebook sees | a Tor exit (`IsTor:true`) | some other country |
-
-Messenger connects **only to `127.0.0.1:9050` (Tor)** — no direct Facebook connections.
-Meta sees the Tor exit, not you.
-
-**Check it yourself:** a browser at `check.torproject.org` shows *"not Tor"* (correct — the
-phone isn't on Tor, only Messenger). Or FB, *Settings > Where you're logged in*, shows the
-Tor exit's country.
 
 ## Build (Linux, arm64-v8a)
 
