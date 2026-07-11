@@ -15,7 +15,7 @@
 \begin{tikzpicture}[
   font=\sffamily,
   state/.style={rounded corners=8pt, draw=#1, line width=1.2pt, fill=cCard, text=cInk,
-                align=center, inner sep=10pt, minimum width=46mm, minimum height=24mm,
+                align=center, inner sep=10pt, minimum width=48mm, minimum height=24mm,
                 drop shadow={shadow xshift=0.6pt, shadow yshift=-1.2pt, opacity=0.12}},
   arr/.style={-{Stealth[length=3.2mm]}, line width=1.5pt, draw=cInk},
   pill/.style={rounded corners=10pt, fill=#1!14, draw=#1, line width=0.8pt, text=#1,
@@ -24,25 +24,25 @@
 ]
 
 \node[font=\sffamily\Large\bfseries, text=cInk] (t) at (5.5,3.2)
-  {Tor bezi LEN ked treba \; --\; setrenie baterie};
+  {Tor runs only when needed \; --\; battery saving};
 
 % states
 \node[state=cOn]  (on)  at (0,0)
-  {\textbf{\textcolor{cMsg}{Messenger OTVORENY}}\\[3pt]
-   \textcolor{cOn}{\textbf{Tor ON}} $\bullet$ VPN aktivna\\[1pt]
-   \footnotesize traffic ide cez Tor};
+  {\textbf{\textcolor{cMsg}{Messenger OPEN}}\\[3pt]
+   \textcolor{cOn}{\textbf{Tor ON}} $\bullet$ VPN active\\[1pt]
+   \footnotesize traffic via Tor};
 \node[state=cOff] (off) at (11,0)
-  {\textbf{Messenger ZAVRETY}\\[3pt]
-   \textcolor{cOff}{\textbf{Tor OFF}} $\bullet$ ziadna VPN\\[1pt]
-   \footnotesize 0 mA na pozadi};
+  {\textbf{Messenger CLOSED}\\[3pt]
+   \textcolor{cOff}{\textbf{Tor OFF}} $\bullet$ no VPN\\[1pt]
+   \footnotesize 0 mA in background};
 
 % transitions
-\draw[arr] ($(on.east)+(0,0.5)$) -- node[above, note]{zavriet\\ + 25 s odklad} ($(off.west)+(0,0.5)$);
-\draw[arr] ($(off.west)-(0,0.5)$) -- node[below, note]{otvorit Messenger} ($(on.east)-(0,0.5)$);
+\draw[arr] ($(on.east)+(0,0.5)$) -- node[above, note]{close\\ + 25 s delay} ($(off.west)+(0,0.5)$);
+\draw[arr] ($(off.west)-(0,0.5)$) -- node[below, note]{open Messenger} ($(on.east)-(0,0.5)$);
 
 % chips
 \node[pill=cOn]    at (0,-2.4) {Tor idle = 0\% CPU, 94 MB};
-\node[pill=cOff]   at (11,-2.4){po zavreti: ziadny kluc VPN};
+\node[pill=cOff]   at (11,-2.4){after close: no VPN key};
 
 \begin{scope}[on background layer]
   \node[fill=cBg, rounded corners=10pt, fit=(t)(on)(off), inner sep=16pt] {};
