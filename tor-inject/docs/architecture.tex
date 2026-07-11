@@ -1,75 +1,101 @@
-\documentclass[border=14pt]{standalone}
+\documentclass[border=0pt]{standalone}
 \usepackage{fontspec}
 \usepackage{tikz}
-\usetikzlibrary{arrows.meta,positioning,backgrounds,fit,calc,shapes.geometric,shadows}
+\usetikzlibrary{arrows.meta,positioning,backgrounds,fit,calc}
 
-\definecolor{cMsg}{HTML}{0866FF}
-\definecolor{cTun}{HTML}{0EA5A4}
-\definecolor{cHev}{HTML}{7C3AED}
-\definecolor{cTor}{HTML}{7D4698}
-\definecolor{cRelay}{HTML}{16A34A}
-\definecolor{cFb}{HTML}{475569}
-\definecolor{cInk}{HTML}{0F172A}
-\definecolor{cBg}{HTML}{F8FAFC}
-\definecolor{cCard}{HTML}{FFFFFF}
-\definecolor{cLine}{HTML}{94A3B8}
-\definecolor{cDanger}{HTML}{DC2626}
+% --- professional, restrained palette ---
+\definecolor{ink}{HTML}{1E293B}
+\definecolor{sub}{HTML}{64748B}
+\definecolor{page}{HTML}{FFFFFF}
+\definecolor{card}{HTML}{F8FAFC}
+\definecolor{line}{HTML}{CBD5E1}
+\definecolor{app}{HTML}{2563EB}
+\definecolor{vpn}{HTML}{0D9488}
+\definecolor{hev}{HTML}{4F46E5}
+\definecolor{tor}{HTML}{7C3AED}
+\definecolor{net}{HTML}{059669}
+\definecolor{fb}{HTML}{334155}
+\definecolor{warn}{HTML}{B45309}
+
+% text macros used inside nodes
+\newcommand{\hd}[1]{{\bfseries #1}}
+\newcommand{\subt}[1]{{\scriptsize\color{sub} #1}}
+
+% back-to-front: page card (bg2) behind the app container (bg) behind nodes (main)
+\pgfdeclarelayer{bg}\pgfdeclarelayer{bg2}\pgfsetlayers{bg2,bg,main}
 
 \begin{document}
 \begin{tikzpicture}[
   font=\sffamily,
-  box/.style={rounded corners=6pt, draw=#1, line width=1.1pt, fill=cCard,
-              text=cInk, align=center, inner sep=8pt, minimum height=15mm,
-              minimum width=30mm, drop shadow={shadow xshift=0.6pt, shadow yshift=-1.2pt, opacity=0.12}},
-  chip/.style={rounded corners=3pt, fill=#1!12, draw=#1, line width=0.7pt, text=#1,
-               font=\sffamily\footnotesize\bfseries, inner sep=3pt},
-  flow/.style={-{Stealth[length=3.4mm]}, line width=1.6pt, draw=cInk},
-  back/.style={-{Stealth[length=3mm]}, line width=1.3pt, draw=cRelay, dashed},
-  lbl/.style={font=\sffamily\scriptsize, text=cInk!70, align=center},
+  node distance=10mm,
+  box/.style={rounded corners=5pt, draw=#1, line width=1pt, fill=white, text=ink,
+              align=center, inner sep=7pt, minimum width=27mm, minimum height=14mm},
+  sublbl/.style={font=\sffamily\scriptsize, text=sub},
+  data/.style={-{Stealth[length=2.8mm,width=2.4mm]}, line width=1.4pt, draw=ink},
+  egress/.style={-{Stealth[length=2.8mm,width=2.4mm]}, line width=1.4pt, draw=net},
 ]
 
-% --- title ---
-\node[font=\sffamily\Large\bfseries, text=cInk] (title) at (9,4.5)
-  {Tor inside the Messenger APK};
-\node[font=\sffamily\small, text=cInk!60] at (9,3.75)
-  {only Messenger goes through Tor \; $\bullet$ \; one app, one icon};
+% ============ TITLE ============
+\node[font=\sffamily\large\bfseries, text=ink] (h1) {Tor inside the Messenger APK};
+\node[sublbl, below=1pt of h1] (h2)
+  {only Messenger is routed through Tor \, -- \, one app, one icon, no Orbot};
 
-% --- main pipeline nodes ---
-\node[box=cMsg]  (msg) at (0,0)   {\textbf{Messenger}\\[1pt]\footnotesize com.facebook.orca};
-\node[box=cTun]  (tun) at (4.5,0) {\textbf{tun / VpnService}\\[1pt]\footnotesize 0.0.0.0/0 \\[-1pt]\footnotesize \emph{minus guard IPs}};
-\node[box=cHev]  (hev) at (9.0,0) {\textbf{hev-socks5}\\[1pt]\footnotesize tun $\leftrightarrow$ SOCKS};
-\node[box=cTor]  (tor) at (13.5,0){\textbf{Tor}\\[1pt]\footnotesize libTor.so \\[-1pt]\footnotesize SOCKS 9050};
+% ============ ROW 1: inside the app (same UID) ============
+\node[box=app, below=14mm of h1.south, xshift=-56mm] (msg) {\hd{Messenger}\\[2pt]\subt{com.facebook.orca}};
+\node[box=vpn, right=of msg] (tun) {\hd{tun (VpnService)}\\[2pt]\subt{captures this app}};
+\node[box=hev, right=of tun] (hev) {\hd{hev-socks5}\\[2pt]\subt{tun $\leftrightarrow$ SOCKS}};
+\node[box=tor, right=of hev] (tor) {\hd{Tor}\\[2pt]\subt{libTor.so : 9050}};
 
-\node[box=cRelay, minimum width=24mm] (guard) at (13.5,-4.1) {\textbf{Guard}\\[-1pt]\footnotesize entry relay};
-\node[box=cRelay, minimum width=24mm] (exit)  at (17.8,-2.2) {\textbf{Exit}\\[-1pt]\footnotesize exit relay};
-\node[box=cFb,   minimum width=24mm] (fb)    at (17.8,0)    {\textbf{Facebook}\\[-1pt]\footnotesize Meta};
+\draw[data] (msg) -- (tun);
+\draw[data] (tun) -- (hev);
+\draw[data] (hev) -- (tor);
 
-% --- forward flow (app -> tunnel -> Tor) ---
-\draw[flow] (msg) -- (tun);
-\draw[flow] (tun) -- (hev);
-\draw[flow] (hev) -- (tor);
+% dashed container: same process / same UID
+\begin{pgfonlayer}{bg}
+  \node[draw=vpn!55, dashed, line width=1pt, rounded corners=8pt, fill=card,
+        inner sep=9pt, fit=(msg)(tun)(hev)(tor)] (appbox) {};
+\end{pgfonlayer}
+\node[font=\sffamily\scriptsize\itshape, text=sub, anchor=south west]
+  at ([xshift=2pt,yshift=2pt]appbox.north west)
+  {inside one app -- same process \& UID (com.facebook.orca)};
 
-% --- Tor -> guard: BYPASS the tunnel (guard IPs excluded) = loop-breaker ---
-\draw[back, line width=1.7pt] (tor.south) -- (guard.north)
-  node[midway, right=3pt, lbl, text=cRelay, align=left]{direct,\\OUTSIDE tunnel};
-\draw[flow, draw=cTor] (guard.east) .. controls +(1.8,0) and +(-0.4,-1.3) .. (exit.south);
-\draw[flow, draw=cRelay] (exit) -- (fb);
+% ============ ROW 2: Tor network -> Facebook ============
+\node[box=net, below=26mm of tun] (guard) {\hd{Guard}\\[2pt]\subt{entry}};
+\node[box=net, right=of guard]     (relay) {\hd{Middle}\\[2pt]\subt{relay}};
+\node[box=net, right=of relay]     (exit)  {\hd{Exit}\\[2pt]\subt{exit}};
+\node[box=fb,  right=16mm of exit] (face)  {\hd{Facebook}\\[2pt]\subt{Meta}};
 
-% --- flow label under tunnel ---
-\node[lbl] at (6.75,-0.95) {encrypted tunnel (this app only)};
+% Tor egress: Tor -> guard (curves down on the left of the network row)
+\draw[egress] (tor.south) .. controls +(0,-12mm) and +(0,12mm) .. (guard.north);
+\draw[egress] (guard) -- (relay);
+\draw[egress] (relay) -- (exit);
+\draw[egress] (exit) -- (face);
 
-% --- loop-breaker callout ---
-\node[chip=cDanger, align=center] (lb) at (7.3,-2.7)
-  {LOOP-BREAKER\\[1pt]\normalfont\scriptsize guard IPs excluded from tunnel $\Rightarrow$ no loop};
-\draw[->, cDanger, line width=1pt, dashed] (lb.east) .. controls +(2.2,0) and +(-1.2,0.4) .. (12.7,-2.0);
+% loop-breaker callout, placed clearly in the open middle area
+\node[rounded corners=4pt, draw=warn, line width=0.9pt, fill=warn!8, text=warn,
+      align=center, font=\sffamily\footnotesize, inner sep=5pt]
+      (lb) at ($(hev)!0.5!(relay) + (0,2mm)$)
+  {\bfseries Loop-breaker\\[1pt]\normalfont Tor's guard IP is excluded from the tun,\\
+   so Tor's own traffic never re-enters the tunnel};
+\draw[-{Stealth[length=2mm]}, warn, line width=0.8pt, dashed]
+  (lb.west) .. controls +(-10mm,0) and +(0,10mm) .. ($(tor.south)!0.45!(guard.north)+(0,1mm)$);
 
-% --- IP proof chips ---
-\node[chip=cFb]   (realip) at (0,-2.4) {real IP: 85.x (CZ)};
-\node[chip=cRelay](torip)  at (17.8,-4.1){FB sees: Tor exit (US)};
-\draw[->, cLine, line width=0.8pt, dashed] (realip) -- (msg);
+% caption under Facebook
+\node[sublbl, below=4mm of face, align=center, text width=36mm]
+  {Facebook sees a \textbf{\color{net}Tor exit} IP\\ (e.g. US), never yours};
 
-\begin{scope}[on background layer]
-  \node[fill=cBg, rounded corners=10pt, fit=(title)(msg)(tun)(hev)(tor)(guard)(exit)(fb)(realip)(torip)(lb), inner sep=16pt] {};
-\end{scope}
+% ============ legend ============
+\node[sublbl, anchor=west] (lgAt) at ($(guard.south west)+(9mm,-16mm)$)
+  {app data -- inside the encrypted tunnel};
+\draw[data] ([xshift=-9mm]lgAt.west) -- ([xshift=-2mm]lgAt.west);
+\node[sublbl, anchor=west] (lgBt) at ($(lgAt.east)+(16mm,0)$)
+  {Tor egress -- direct, outside the tunnel};
+\draw[egress] ([xshift=-9mm]lgBt.west) -- ([xshift=-2mm]lgBt.west);
+
+% ============ background card ============
+\begin{pgfonlayer}{bg2}
+  \node[fill=page, draw=line, line width=1pt, rounded corners=12pt,
+        fit=(h1)(h2)(appbox)(guard)(relay)(exit)(face)(lb)(lgAt)(lgBt), inner sep=16pt] {};
+\end{pgfonlayer}
 \end{tikzpicture}
 \end{document}
