@@ -1,0 +1,75 @@
+\documentclass[border=14pt]{standalone}
+\usepackage{fontspec}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta,positioning,backgrounds,fit,calc,shapes.geometric,shadows}
+
+\definecolor{cMsg}{HTML}{0866FF}
+\definecolor{cTun}{HTML}{0EA5A4}
+\definecolor{cHev}{HTML}{7C3AED}
+\definecolor{cTor}{HTML}{7D4698}
+\definecolor{cRelay}{HTML}{16A34A}
+\definecolor{cFb}{HTML}{475569}
+\definecolor{cInk}{HTML}{0F172A}
+\definecolor{cBg}{HTML}{F8FAFC}
+\definecolor{cCard}{HTML}{FFFFFF}
+\definecolor{cLine}{HTML}{94A3B8}
+\definecolor{cDanger}{HTML}{DC2626}
+
+\begin{document}
+\begin{tikzpicture}[
+  font=\sffamily,
+  box/.style={rounded corners=6pt, draw=#1, line width=1.1pt, fill=cCard,
+              text=cInk, align=center, inner sep=8pt, minimum height=15mm,
+              minimum width=30mm, drop shadow={shadow xshift=0.6pt, shadow yshift=-1.2pt, opacity=0.12}},
+  chip/.style={rounded corners=3pt, fill=#1!12, draw=#1, line width=0.7pt, text=#1,
+               font=\sffamily\footnotesize\bfseries, inner sep=3pt},
+  flow/.style={-{Stealth[length=3.4mm]}, line width=1.6pt, draw=cInk},
+  back/.style={-{Stealth[length=3mm]}, line width=1.3pt, draw=cRelay, dashed},
+  lbl/.style={font=\sffamily\scriptsize, text=cInk!70, align=center},
+]
+
+% --- title ---
+\node[font=\sffamily\Large\bfseries, text=cInk] (title) at (9,4.5)
+  {Spravaren\, --\, Tor priamo v Messenger APK};
+\node[font=\sffamily\small, text=cInk!60] at (9,3.75)
+  {cez Tor ide IBA Messenger \; $\bullet$ \; jedna appka, jedna ikona};
+
+% --- main pipeline nodes ---
+\node[box=cMsg]  (msg) at (0,0)   {\textbf{Messenger}\\[1pt]\footnotesize com.facebook.orca};
+\node[box=cTun]  (tun) at (4.5,0) {\textbf{tun / VpnService}\\[1pt]\footnotesize 0.0.0.0/0 \\[-1pt]\footnotesize \emph{minus guard IP}};
+\node[box=cHev]  (hev) at (9.0,0) {\textbf{hev-socks5}\\[1pt]\footnotesize tun $\leftrightarrow$ SOCKS};
+\node[box=cTor]  (tor) at (13.5,0){\textbf{Tor}\\[1pt]\footnotesize libTor.so \\[-1pt]\footnotesize SOCKS 9050};
+
+\node[box=cRelay, minimum width=24mm] (guard) at (13.5,-4.1) {\textbf{Guard}\\[-1pt]\footnotesize vstupny uzol};
+\node[box=cRelay, minimum width=24mm] (exit)  at (17.8,-2.2) {\textbf{Exit}\\[-1pt]\footnotesize vystupny uzol};
+\node[box=cFb,   minimum width=24mm] (fb)    at (17.8,0)    {\textbf{Facebook}\\[-1pt]\footnotesize Meta};
+
+% --- forward flow (appka -> tunel -> Tor) ---
+\draw[flow] (msg) -- (tun);
+\draw[flow] (tun) -- (hev);
+\draw[flow] (hev) -- (tor);
+
+% --- Tor -> guard: BYPASS tunela (guard IP vynechane) = loop-breaker ---
+\draw[back, line width=1.7pt] (tor.south) -- (guard.north)
+  node[midway, right=3pt, lbl, text=cRelay, align=left]{priamo,\\MIMO tunela};
+\draw[flow, draw=cTor] (guard.east) .. controls +(1.8,0) and +(-0.4,-1.3) .. (exit.south);
+\draw[flow, draw=cRelay] (exit) -- (fb);
+
+% --- flow label under tunnel ---
+\node[lbl] at (6.75,-0.95) {sifrovany tunel (len tato appka)};
+
+% --- loop-breaker callout ---
+\node[chip=cDanger, align=center] (lb) at (7.3,-2.7)
+  {LOOP-BREAKER\\[1pt]\normalfont\scriptsize guard IP vynechane z tunela $\Rightarrow$ ziadna slucka};
+\draw[->, cDanger, line width=1pt, dashed] (lb.east) .. controls +(2.2,0) and +(-1.2,0.4) .. (12.7,-2.0);
+
+% --- IP proof chips ---
+\node[chip=cFb]   (realip) at (0,-2.4) {realna IP: 85.x (CZ)};
+\node[chip=cRelay](torip)  at (17.8,-4.1){FB vidi: Tor exit (US)};
+\draw[->, cLine, line width=0.8pt, dashed] (realip) -- (msg);
+
+\begin{scope}[on background layer]
+  \node[fill=cBg, rounded corners=10pt, fit=(title)(msg)(tun)(hev)(tor)(guard)(exit)(fb)(realip)(torip)(lb), inner sep=16pt] {};
+\end{scope}
+\end{tikzpicture}
+\end{document}
