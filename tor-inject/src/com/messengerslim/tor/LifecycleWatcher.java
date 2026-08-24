@@ -19,23 +19,27 @@ import android.util.Log;
 public class LifecycleWatcher implements Application.ActivityLifecycleCallbacks {
 
     private static final String TAG = "OrcaTor";
-    private static final long GRACE_MS = 25_000; // cakaj 25s v pozadi pred vypnutim
+    private static final long GRACE_MS = 25_000;      // 25s v pozadi -> vypni Tor (tunel ostava)
+    // Tunel sa v pozadi NEZLOZI. Tor sa vypne (baterka), ale prazdny tunel ostava, aby
+    // appka na pozadi nemala kade poslat nic priamo. Kluc VPN v status bare = ta poistka.
 
     private final Application app;
     private final Handler main = new Handler(Looper.getMainLooper());
     private int started = 0;
     private boolean torWanted = false;
 
+    /** 1. stupen: Tor prec (baterka), tunel ostava blackhole - appka sa von priamo nedostane. */
     private final Runnable stopTask = new Runnable() {
         @Override public void run() {
             if (started == 0 && torWanted) {
                 torWanted = false;
                 app.startService(new Intent(app, OrcaTorVpnService.class)
-                        .setAction(OrcaTorVpnService.ACTION_STOP));
-                Log.i(TAG, "Messenger v pozadi -> Tor vypnuty (setrenie baterie)");
+                        .setAction(OrcaTorVpnService.ACTION_SLEEP));
+                Log.i(TAG, "Messenger v pozadi -> Tor vypnuty, tunel ostava (fail-closed)");
             }
         }
     };
+
 
     public LifecycleWatcher(Application app) { this.app = app; }
 
@@ -53,7 +57,7 @@ public class LifecycleWatcher implements Application.ActivityLifecycleCallbacks 
     public void onActivityStopped(Activity a) {
         started = Math.max(0, started - 1);
         if (started == 0) {
-            // Messenger islo do pozadia -> naplanuj vypnutie Toru po GRACE.
+            // Messenger islo do pozadia -> vypni Tor, tunel necha blackhole.
             main.postDelayed(stopTask, GRACE_MS);
         }
     }

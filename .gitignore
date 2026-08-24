@@ -26,6 +26,7 @@ Thumbs.db
 
 # keep repo root clean (scratch logs/errs)
 /*.log
+logs/*.log
 /*.err
 
 # conversation exports (contain private data) - never commit

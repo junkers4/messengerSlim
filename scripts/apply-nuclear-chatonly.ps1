@@ -93,7 +93,7 @@ $uiTargets = @(
   'smali_classes7/com/facebook/messaging/users/username/EditUsernameActivity.smali',
   'smali_classes8/com/facebook/messaging/users/displayname/ChangeDisplayNameSettingsActivity.smali',
   'smali_classes9/com/facebook/nativetemplates/fb/shell/messenger/NativeTemplatesMessengerActivity.smali',
-  'smali_classes8/com/facebook/runtimepermissions/RequestPermissionsActivity.smali',
+  # RequestPermissionsActivity NECHANE ZIVE - cez nu appka pyta mikrofon/kameru pre hovory
   'smali_classes7/com/facebook/messaging/accountswitch/switchoneclick/SwitchOneClickActivity.smali',
   'smali_classes10/com/facebook/messaging/accountswitch/SwitchAccountActivity.smali',
   'smali_classes10/com/facebook/messaging/accountswitch/silent/SwitchAccountsSilentActivity.smali',

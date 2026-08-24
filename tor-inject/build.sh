@@ -26,11 +26,14 @@ WORK="$HERE/build"; rm -rf "$WORK"; mkdir -p "$WORK"
 echo "== 1) APKEditor decode (-dex raw) =="
 java -jar "$APKEDITOR" d -dex -i "$IN_APK" -o "$WORK/decoded"
 
-echo "== 2) javac + d8 -> classes14.dex =="
+echo "== 2) javac + d8 -> dalsi volny classesN.dex =="
 mkdir -p "$WORK/cls" "$WORK/dex"
 javac -source 17 -target 17 -cp "$ANDROID_JAR" -d "$WORK/cls" $(find "$HERE/src" -name '*.java')
 d8 --min-api 28 --output "$WORK/dex" $(find "$WORK/cls" -name '*.class')
-cp "$WORK/dex/classes.dex" "$WORK/decoded/dex/classes14.dex"
+# index NEsmie kolidovat s existujucimi dex (550 mal 13, 575 ma 15)
+IDX=2; while [ -f "$WORK/decoded/dex/classes${IDX}.dex" ]; do IDX=$((IDX+1)); done
+echo "   -> classes${IDX}.dex"
+cp "$WORK/dex/classes.dex" "$WORK/decoded/dex/classes${IDX}.dex"
 
 echo "== 3) pridaj nativne kniznice =="
 cp "$LIBTOR" "$WORK/decoded/root/lib/arm64-v8a/libTor.so"
@@ -41,7 +44,9 @@ python3 - "$WORK/decoded/AndroidManifest.xml" "$HERE/manifest-inject.xml" <<'PY'
 import sys, re
 mf, snip = sys.argv[1], sys.argv[2]
 s = open(mf, encoding="utf-8").read()
-inj = "".join(l for l in open(snip, encoding="utf-8") if not l.lstrip().startswith("<!--") and "-->" not in l)
+# cely XML komentar prec - jeho telo obsahuje "</application>" a zavrelo by element priskoro
+inj = re.sub(r"<!--.*?-->", "", open(snip, encoding="utf-8").read(), flags=re.S).strip()
+assert "</application>" not in inj, "snippet stale obsahuje </application>"
 assert s.count("</application>") == 1
 open(mf, "w", encoding="utf-8").write(s.replace("</application>", inj + "\n  </application>", 1))
 print("manifest injected")

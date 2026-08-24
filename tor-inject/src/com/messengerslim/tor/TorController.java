@@ -31,6 +31,31 @@ public class TorController {
     private final int ctrlPort = 9051;
     private Process torProcess;
 
+    /**
+     * IPv4 Torovych directory authorities (Tor ich ma hardcoded). Vynimame ich z tunela, aby
+     * Tor vedel stiahnut consensus aj ked este nema ziadny guard. Je to len pomocka pri
+     * bootstrape - ak sa niektora zmeni, dynamicke vynimanie (discoveredPeerIps) to dobehne.
+     */
+    private static final String[] DIRAUTH_IPS = {
+            "128.31.0.39",   // moria1
+            "86.59.21.38",   // tor26
+            "45.66.35.11",   // dizum
+            "131.188.40.189",// gabelmoo
+            "193.23.244.244",// dannenberg
+            "171.25.193.9",  // maatuska
+            "199.58.81.140", // longclaw
+            "204.13.164.118",// bastet
+            "216.218.219.41",// faravahar
+            "66.111.2.131",  // Serge
+    };
+
+    /** IP, na ktore sa Tor pocas behu pokusal spojit (vytiahnute z jeho logu). */
+    private final java.util.Set<Long> peerIps =
+            java.util.Collections.synchronizedSet(new java.util.LinkedHashSet<Long>());
+
+    private static final java.util.regex.Pattern PEER_RX =
+            java.util.regex.Pattern.compile(" at (\\d{1,3}(?:\\.\\d{1,3}){3})");
+
     public volatile int bootstrapPercent = 0;
     public volatile boolean bootstrapped = false;
     public volatile boolean died = false;
@@ -62,6 +87,9 @@ public class TorController {
                 "ClientPreferIPv6ORPort 0\n" +
                 "AvoidDiskWrites 1\n" +
                 "ClientOnly 1\n" +
+                // bootstrap len cez hardcoded dir authorities -> mnozina IP, ktore
+                // treba vynat z tunela, je mala a znama (pozri DIRAUTH_IPS)
+                "UseDefaultFallbackDirs 0\n" +
                 "Log notice stdout\n";
         try (OutputStream os = new FileOutputStream(torrc)) {
             os.write(cfg.getBytes(StandardCharsets.UTF_8));
@@ -84,6 +112,13 @@ public class TorController {
                 String line;
                 while ((line = r.readLine()) != null) {
                     Log.i(TAG, line);
+                    java.util.regex.Matcher pm = PEER_RX.matcher(line);
+                    while (pm.find()) {
+                        try {
+                            long ip = RouteUtil.parse(pm.group(1));
+                            if (isRoutablePeer(ip)) peerIps.add(ip);
+                        } catch (Exception ignored) {}
+                    }
                     int idx = line.indexOf("Bootstrapped ");
                     if (idx >= 0) {
                         try {
@@ -110,6 +145,31 @@ public class TorController {
             try { Thread.sleep(200); } catch (InterruptedException e) { return false; }
         }
         return bootstrapped;
+    }
+
+    /** Odfiltruj loopback, privatne rozsahy a nase tun adresy - tie do vynimiek nepatria. */
+    private static boolean isRoutablePeer(long ip) {
+        long a = (ip >> 24) & 255, b = (ip >> 16) & 255;
+        if (a == 0 || a == 127 || a == 10) return false;
+        if (a == 172 && b >= 16 && b <= 31) return false;
+        if (a == 192 && b == 168) return false;
+        if (a == 198 && (b == 18 || b == 19)) return false;
+        if (a >= 224) return false;
+        return true;
+    }
+
+    /** IP dir authorities - staticka pomocka pre fail-closed bootstrap. */
+    public static List<Long> dirAuthIps() {
+        List<Long> res = new ArrayList<>();
+        for (String s : DIRAUTH_IPS) {
+            try { res.add(RouteUtil.parse(s)); } catch (Exception ignored) {}
+        }
+        return res;
+    }
+
+    /** IP, na ktore sa Tor pokusal spojit (z logu) - dopĺňa sa pocas bootstrapu. */
+    public List<Long> discoveredPeerIps() {
+        synchronized (peerIps) { return new ArrayList<>(peerIps); }
     }
 
     public boolean isAlive() { return torProcess != null && torProcess.isAlive() && !died; }
