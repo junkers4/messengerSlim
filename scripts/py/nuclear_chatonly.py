@@ -128,6 +128,24 @@ CALL_WHITELIST = re.compile(
     r"|(runtimepermissions[/])"
 )
 
+# Sprava (messaging core): realtime transport + MSYS runtime + mailbox sa NIKDY nesmu
+# poskodit plosnymi sweepmi (fazy 3-6). Inak sa mailbox/runtime neinicializuje a zoznam
+# sprav vo vlakne ostane PRAZDNY (aj pre vlastnu odoslanu spravu) - UI nema odkial brat data.
+# Terminy su volene tak, aby nezasiahli vypinane feature (reels/stories/marketplace/ads/...).
+MSG_WHITELIST = re.compile(
+    r"(mqtt)"                          # mqttlite / multiusermqtt - realtime transport sprav
+    r"|(msys)"                         # MSYS runtime + mailbox sync
+    r"|(mailbox)"
+    r"|(omnistore)"
+    r"|(realtime)"
+    r"|(presence)"
+    r"|(/xplat/)"                      # cross-platform messaging runtime
+    r"|(messaging/[^/]*sync)"          # messaging delta/message sync
+    r"|(graphql/(subscription|realtime|executor))"
+    r"|(pando)",                       # relay/pando data layer
+    re.IGNORECASE,
+)
+
 
 def finish_body(hook: str, sup: str) -> str:
     return (f".method public {hook}(Landroid/os/Bundle;)V\n"
@@ -255,7 +273,7 @@ def main() -> int:
     p3f = p3m = 0
     for f in files:
         rel = rel_of[f]
-        if not bg_rx.search(rel) or CALL_WHITELIST.search(rel):
+        if not bg_rx.search(rel) or CALL_WHITELIST.search(rel) or MSG_WHITELIST.search(rel):
             continue
         content = orig = f.read_text(errors="ignore")
         for rx, repl in NOOP_SPECS:
@@ -276,7 +294,7 @@ def main() -> int:
         if not re.search(r"\.super\s+L[^\n]*Activity;", head):
             continue
         rel = rel_of[f]
-        if act_wl.search(rel) or CALL_WHITELIST.search(rel):
+        if act_wl.search(rel) or CALL_WHITELIST.search(rel) or MSG_WHITELIST.search(rel):
             p4wl += 1
             continue
         content = f.read_text(errors="ignore")
@@ -299,7 +317,7 @@ def main() -> int:
         if not is_svc and not is_rcv:
             continue
         rel = rel_of[f]
-        if svc_wl.search(rel) or CALL_WHITELIST.search(rel):
+        if svc_wl.search(rel) or CALL_WHITELIST.search(rel) or MSG_WHITELIST.search(rel):
             p5wl += 1
             continue
         content = orig = f.read_text(errors="ignore")
@@ -322,7 +340,7 @@ def main() -> int:
         if not re.search(r"\.super\s+L[^\n]*Provider;", head):
             continue
         rel = rel_of[f]
-        if prov_wl.search(rel):
+        if prov_wl.search(rel) or MSG_WHITELIST.search(rel):
             p6wl += 1
             continue
         content = f.read_text(errors="ignore")
