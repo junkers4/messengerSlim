@@ -52,6 +52,9 @@ open(mf, "w", encoding="utf-8").write(s.replace("</application>", inj + "\n  </a
 print("manifest injected")
 PY
 
+echo "== 4b) zhasni background-wake komponenty (no push/boot -> ziadny beh na pozadi, ziadny leak) =="
+python3 "$HERE/../scripts/py/no_background_manifest.py" "$WORK/decoded/AndroidManifest.xml"
+
 echo "== 5) build + zipalign + sign =="
 java -jar "$APKEDITOR" b -i "$WORK/decoded" -o "$WORK/unsigned.apk"
 zipalign -f -p 4 "$WORK/unsigned.apk" "$WORK/aligned.apk"

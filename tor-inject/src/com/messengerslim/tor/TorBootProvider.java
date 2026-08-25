@@ -15,8 +15,6 @@ import android.util.Log;
  */
 public class TorBootProvider extends ContentProvider {
     private static final String TAG = "OrcaTor";
-    /** Max. cakanie na tunel pri starte procesu (drzi main thread - musi byt kratke). */
-    private static final long TUNNEL_WAIT_MS = 2500;
 
     @Override
     public boolean onCreate() {
@@ -25,30 +23,15 @@ public class TorBootProvider extends ContentProvider {
             if (ctx instanceof Application) {
                 Application app = (Application) ctx;
                 app.registerActivityLifecycleCallbacks(new LifecycleWatcher(app));
-                Log.i(TAG, "LifecycleWatcher zaregistrovany (Tor len ked je Messenger otvoreny)");
+                Log.i(TAG, "LifecycleWatcher zaregistrovany (Tor sa spusti ked Messenger pride do popredia)");
 
-                // Bezi na zaciatku startu procesu (initOrder max). Postav tunel HNED a pockaj
-                // na neho - inak by Messenger stihol poslat prve pakety mimo Toru.
-                if (android.net.VpnService.prepare(app) == null) {
-                    try {
-                        // stary marker prec - cakame na potvrdenie od :tor procesu
-                        OrcaTorVpnService.marker(app).delete();
-                        app.startForegroundService(new android.content.Intent(app, OrcaTorVpnService.class)
-                                .setAction(OrcaTorVpnService.ACTION_START));
-                        long t0 = android.os.SystemClock.elapsedRealtime();
-                        boolean up = false;
-                        java.io.File marker = OrcaTorVpnService.marker(app);
-                        while (android.os.SystemClock.elapsedRealtime() - t0 < TUNNEL_WAIT_MS) {
-                            if (marker.exists()) { up = true; break; }
-                            try { Thread.sleep(20); } catch (InterruptedException ie) { break; }
-                        }
-                        Log.i(TAG, "Cakanie na tunel: " + (android.os.SystemClock.elapsedRealtime() - t0)
-                                + " ms, hore=" + up);
-                    } catch (Throwable t) {
-                        // napr. FGS sa neda spustit z pozadia - Tor nabehne pri otvoreni appky
-                        Log.w(TAG, "tunel pri starte procesu nenabehol: " + t);
-                    }
-                }
+                // Tunel sa NESPUSTA odtialto. ContentProvider.onCreate bezi pri starte procesu
+                // este PRED prvou Activity, cize v pozadi - a Android z pozadia nepovoli promociu
+                // sluzby na foreground (startForeground zlyha -> ANR "did not call startForeground"
+                // -> kill :tor procesu po ~42s). Preto tunel dvíha az LifecycleWatcher.onActivityStarted,
+                // kde uz appka je v popredi a FGS je povolena. Kedze background-wake je vypnuty
+                // (ziadne FCM/boot), Messenger sa aj tak spusta iba do popredia.
+                OrcaTorVpnService.marker(app).delete();
             }
         } catch (Throwable t) { Log.e(TAG, "boot hook", t); }
         return true;

@@ -47,11 +47,14 @@ public class OrcaTorVpnService extends VpnService {
 
     public static volatile boolean READY = false;
 
-    /** Bootstrap sa nikdy nevzda otvorenim siete; po tomto case ostava blackhole. */
+    /** Ak sa bootstrap do tohto casu nechyti, docasne otvor siet, nech Tor dobehne. */
+    private static final long STALL_OPEN_MS = 15_000;
+
+    /** Po tomto case sa bootstrap definitivne vzda a ostava blackhole. */
     private static final long BOOTSTRAP_TIMEOUT_MS = 180_000;
 
     /** Strop vynimiek v tuneli (~27 trass na jednu IP). */
-    private static final int MAX_EXCLUSIONS = 24;
+    private static final int MAX_EXCLUSIONS = 48;
 
     /**
      * Odpocitane, ked tunel stoji (alebo sa ho postavit nepodarilo). TorBootProvider na to
@@ -93,10 +96,16 @@ public class OrcaTorVpnService extends VpnService {
             stopAll(); stopSelf(); return START_NOT_STICKY;
         }
         if (intent != null && ACTION_SLEEP.equals(intent.getAction())) {
-            Log.i(TAG, "Messenger v pozadi -> Tor vypnuty, tunel ostava blackhole (fail-closed)");
-            blackhole();
-            return START_STICKY;
+            Log.i(TAG, "Messenger zavrety/v pozadi -> Tor aj tunel dole, VPN kluc zmizne");
+            stopAll();
+            stopSelf();
+            return START_NOT_STICKY;
         }
+        // Foreground HNED na main threade - splni FGS kontrakt v okne, ktore Android dava
+        // (inak "startForegroundService() did not then call startForeground()" -> ANR/kill).
+        // Volane je to z popredia (LifecycleWatcher.onActivityStarted), takze promocia prejde.
+        try { startForeground(NOTIF_ID, notif()); }
+        catch (Throwable t) { Log.e(TAG, "startForeground zlyhal (pozadie?)", t); }
         if (tun != null) markTunnelUp();   // uz stoji z predchadzajuceho behu
         if (!running) { running = true; new Thread(this::startAll, "orca-tor-start").start(); }
         return START_STICKY;
@@ -105,7 +114,6 @@ public class OrcaTorVpnService extends VpnService {
     private void startAll() {
         java.util.LinkedHashSet<Long> excl = new java.util.LinkedHashSet<>();
         try {
-            startForeground(NOTIF_ID, notif());
             tor = new TorController(this, SOCKS, DNSP);
 
             // 1) FAIL-CLOSED HNED: tunel drzi Messenger bez siete este skor, nez sa Tor pusti.
@@ -127,15 +135,30 @@ public class OrcaTorVpnService extends VpnService {
             // 2) Spusti Tor.
             tor.startAsync();
 
-            // 3) Cakaj na bootstrap. Siet sa NIKDY neotvara - namiesto toho priebezne
-            //    vynimame z tunela presne tie IP, na ktore sa Tor prave pokusa spojit.
+            // 3) Cakaj na bootstrap. Najprv fail-closed: z tunela priebezne vynimame IP,
+            //    na ktore sa Tor prave pokusa spojit (dir authorities + guardy). Ak sa ale
+            //    bootstrap do STALL_OPEN_MS nechyti (prvy beh / rotacia guardu, kedy este
+            //    nevieme jeho IP a tunel by mu blokoval spojenie na guard), na dobehnutie
+            //    Toru docasne otvorime siet - inak by bootstrap uviazol a Messenger by
+            //    nikdy nedostal spravy. Po bootstrape sa tunel HNED postavi spat (krok 5).
             long deadline = System.currentTimeMillis() + BOOTSTRAP_TIMEOUT_MS;
+            long stallAt  = System.currentTimeMillis() + STALL_OPEN_MS;
+            boolean opened = false;
             while (!tor.bootstrapped) {
                 if (tor.died) { Log.e(TAG, "Tor spadol pocas bootstrapu -> ostava blackhole"); blackhole(); return; }
                 if (System.currentTimeMillis() > deadline) { Log.e(TAG, "Bootstrap timeout -> ostava blackhole"); blackhole(); return; }
-                boolean changed = mergeExclusions(excl, tor.discoveredPeerIps());
-                changed |= mergeExclusions(excl, tor.guardIps());
-                if (changed) rebuildTun(excl);
+                if (!opened) {
+                    boolean changed = mergeExclusions(excl, tor.discoveredPeerIps());
+                    changed |= mergeExclusions(excl, tor.guardIps());
+                    if (changed) rebuildTun(excl);
+                    if (System.currentTimeMillis() > stallAt) {
+                        Log.w(TAG, "Bootstrap stalluje -> docasne otvaram siet, nech Tor dobehne");
+                        opened = true;
+                        markTunnelDown();
+                        ParcelFileDescriptor old = tun; tun = null;
+                        try { if (old != null) old.close(); } catch (Exception ignored) {}
+                    }
+                }
                 Thread.sleep(750);
             }
 
@@ -150,6 +173,7 @@ public class OrcaTorVpnService extends VpnService {
             excl.addAll(TorController.dirAuthIps());
             excl.addAll(guards);
             if (!rebuildTun(excl)) { Log.e(TAG, "final establish=null"); stopAll(); stopSelf(); return; }
+            markTunnelUp();
 
             // 6) hev: pumpuj tun <-> Tor SOCKS.
             File cfg = writeHev();
@@ -175,6 +199,7 @@ public class OrcaTorVpnService extends VpnService {
         for (long ip : add) if (excl.add(ip)) changed = true;
         if (excl.size() > MAX_EXCLUSIONS) {
             java.util.List<Long> keep = TorController.dirAuthIps();
+            if (tor != null) keep.addAll(tor.guardIps());   // guard nikdy nevyhadzuj
             java.util.Iterator<Long> it = excl.iterator();
             while (excl.size() > MAX_EXCLUSIONS && it.hasNext()) {
                 Long ip = it.next();

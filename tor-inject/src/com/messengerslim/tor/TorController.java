@@ -174,6 +174,13 @@ public class TorController {
 
     public boolean isAlive() { return torProcess != null && torProcess.isAlive() && !died; }
 
+    /** Koncova stavova riadka ControlPortu, napr. "250 OK" alebo "552 ...". */
+    private static boolean isEndLine(String line) {
+        return line.length() >= 4 && Character.isDigit(line.charAt(0))
+                && Character.isDigit(line.charAt(1)) && Character.isDigit(line.charAt(2))
+                && line.charAt(3) == ' ';
+    }
+
     /** IP guard uzlov cez ControlPort (orconn-status -> ns/id/<fp>). */
     public List<Long> guardIps() {
         List<Long> res = new ArrayList<>();
@@ -190,19 +197,34 @@ public class TorController {
             if (r == null || !r.startsWith("250")) { Log.w(TAG, "ctrl auth: " + r); return res; }
 
             List<String> fps = new ArrayList<>();
-            send(o, "GETINFO orconn-status\r\n");
             String line;
+
+            // (a) aktivne OR-spojenia (aj v stave CONNECTING - guard, na ktory sa Tor prave
+            //     pokusa spojit, tu je uz teraz)
+            send(o, "GETINFO orconn-status\r\n");
             while ((line = in.readLine()) != null) {
-                if (line.equals(".")) break;
+                if (isEndLine(line)) break;   // koncova stavova riadka (250/552/...) = koniec odpovede
+                if (line.equals(".")) continue;
                 int i = line.indexOf('$');
-                if (i >= 0 && line.length() >= i + 41) fps.add(line.substring(i + 1, i + 41));
+                if (i >= 0 && line.length() >= i + 41) { String fp = line.substring(i + 1, i + 41); if (!fps.contains(fp)) fps.add(fp); }
             }
-            in.readLine();
+
+            // (b) vybrate entry guardy - Tor ich pozna hned po stiahnuti consensu (cez dir
+            //     authorities), este skor nez sa na ne vobec pokusi spojit. Vdaka tomu ich
+            //     vieme vynat z tunela BEZ toho, aby sme museli otvarat siet (bez leaku).
+            send(o, "GETINFO entry-guards\r\n");
+            while ((line = in.readLine()) != null) {
+                if (isEndLine(line)) break;
+                if (line.equals(".")) continue;
+                int i = line.indexOf('$');
+                if (i >= 0 && line.length() >= i + 41) { String fp = line.substring(i + 1, i + 41); if (!fps.contains(fp)) fps.add(fp); }
+            }
 
             for (String fp : fps) {
                 send(o, "GETINFO ns/id/$" + fp + "\r\n");
                 while ((line = in.readLine()) != null) {
-                    if (line.equals(".")) break;
+                    if (isEndLine(line)) break;
+                    if (line.equals(".")) continue;
                     if (line.startsWith("r ")) {
                         String[] p = line.split(" ");
                         if (p.length >= 7) {
@@ -211,7 +233,6 @@ public class TorController {
                         }
                     }
                 }
-                in.readLine();
             }
             send(o, "QUIT\r\n");
         } catch (Throwable t) { Log.w(TAG, "guardIps ctrl", t); }

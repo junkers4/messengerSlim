@@ -19,9 +19,10 @@ import android.util.Log;
 public class LifecycleWatcher implements Application.ActivityLifecycleCallbacks {
 
     private static final String TAG = "OrcaTor";
-    private static final long GRACE_MS = 25_000;      // 25s v pozadi -> vypni Tor (tunel ostava)
-    // Tunel sa v pozadi NEZLOZI. Tor sa vypne (baterka), ale prazdny tunel ostava, aby
-    // appka na pozadi nemala kade poslat nic priamo. Kluc VPN v status bare = ta poistka.
+    private static final long GRACE_MS = 30_000;      // 30s v pozadi -> zhasni vsetko
+    // Po 30s v pozadi sa zlozi Tor VPN (tunel dole, VPN kluc zmizne) A zabije sa aj samotny
+    // Messenger. Tym padom nemoze bezat na pozadi ani nic leaknut. Pri dalsom otvoreni sa
+    // proces nastartuje odznova a TorBootProvider postavi tunel skor, nez ide siet.
 
     private final Application app;
     private final Handler main = new Handler(Looper.getMainLooper());
@@ -33,9 +34,20 @@ public class LifecycleWatcher implements Application.ActivityLifecycleCallbacks 
         @Override public void run() {
             if (started == 0 && torWanted) {
                 torWanted = false;
+                // 1) zloz Tor VPN (:tor proces): tunel dole, notifikacia prec -> VPN kluc zmizne
                 app.startService(new Intent(app, OrcaTorVpnService.class)
-                        .setAction(OrcaTorVpnService.ACTION_SLEEP));
-                Log.i(TAG, "Messenger v pozadi -> Tor vypnuty, tunel ostava (fail-closed)");
+                        .setAction(OrcaTorVpnService.ACTION_STOP));
+                Log.i(TAG, "Messenger " + (GRACE_MS / 1000) + "s v pozadi -> zhasinam Tor VPN a ukoncujem Messenger");
+                // 2) po chvili (nech STOP intent stihne dojst do :tor procesu) zabi aj samotny
+                //    Messenger, aby nemohol bezat na pozadi ani nic leaknut
+                main.postDelayed(new Runnable() {
+                    @Override public void run() {
+                        if (started == 0) {
+                            android.os.Process.killProcess(android.os.Process.myPid());
+                            System.exit(0);
+                        }
+                    }
+                }, 1200);
             }
         }
     };
