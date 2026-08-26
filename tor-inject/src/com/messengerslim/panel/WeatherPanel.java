@@ -65,7 +65,14 @@ public final class WeatherPanel {
 
     private static void replaceWithPanel(ViewGroup tray) {
         try {
-            if (tray.findViewWithTag("swp_panel") != null) return; // uz vlozeny
+            if (tray.findViewWithTag("swp_panel") != null) return; // uz nas panel v tomto tray
+            // dedup: po refreshi Messenger vyrobi novy tray -> nechceme 2x panel.
+            // ak uz panel existuje inde v okne, tento tray len skryjeme.
+            View root = tray.getRootView();
+            if (root instanceof ViewGroup && ((ViewGroup) root).findViewWithTag("swp_panel") != null) {
+                tray.setVisibility(View.GONE);
+                return;
+            }
             Context ctx = tray.getContext();
             // skry povodny obsah (stories RecyclerView), nech sa neprekryva
             for (int i = 0; i < tray.getChildCount(); i++) {
@@ -92,8 +99,8 @@ public final class WeatherPanel {
         box.setOrientation(LinearLayout.VERTICAL);
         box.setGravity(Gravity.CENTER);
         int px = (int) (14 * d);
-        box.setPadding(px, (int) (10 * d), px, (int) (10 * d));
-        box.setMinimumHeight((int) (92 * d));
+        box.setPadding(px, (int) (8 * d), px, (int) (8 * d));
+        box.setMinimumHeight((int) (104 * d));
 
         final TextView weather = new TextView(ctx);
         weather.setTextSize(TypedValue.COMPLEX_UNIT_SP, 19);
@@ -105,13 +112,28 @@ public final class WeatherPanel {
         nameday.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14);
         nameday.setTextColor(0xFFB388FF); // fialova (branding akcent)
         nameday.setGravity(Gravity.CENTER);
-        nameday.setPadding(0, (int) (4 * d), 0, 0);
+        nameday.setPadding(0, (int) (3 * d), 0, 0);
         nameday.setText("Dnes má meniny: " + namedayToday());
+
+        // news ticker (titulky v skratke, bezia horizontalne)
+        final TextView news = new TextView(ctx);
+        news.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
+        news.setTextColor(0xFFBEBEBE);
+        news.setGravity(Gravity.CENTER);
+        news.setPadding(0, (int) (5 * d), 0, 0);
+        news.setSingleLine(true);
+        news.setHorizontallyScrolling(true);
+        news.setEllipsize(android.text.TextUtils.TruncateAt.MARQUEE);
+        news.setMarqueeRepeatLimit(-1);
+        news.setSelected(true); // spusti marquee
+        news.setText("📰 načítavam správy…");
 
         box.addView(weather);
         box.addView(nameday);
+        box.addView(news);
 
         fetchWeatherAsync(weather);
+        fetchNewsAsync(news);
         return box;
     }
 
@@ -174,6 +196,85 @@ public final class WeatherPanel {
         if (code >= 85 && code <= 86) return "🌨️ snehové prehánky";
         if (code >= 95) return "⛈️ búrka";
         return "";
+    }
+
+    // ---- news ticker (titulky) ----
+
+    // Google News RSS (SK) - bez API kluca, ide cez Tor. Zmena zdroja = zmena URL.
+    private static final String NEWS_RSS =
+            "https://news.google.com/rss?hl=sk&gl=SK&ceid=SK:sk";
+
+    private static void fetchNewsAsync(final TextView target) {
+        final Handler main = new Handler(Looper.getMainLooper());
+        new Thread(new Runnable() {
+            public void run() {
+                final String text = fetchNews();
+                if (text == null) return;
+                main.post(new Runnable() {
+                    public void run() {
+                        try {
+                            target.setText(text);
+                            target.setSelected(true); // re-spusti marquee
+                        } catch (Throwable ignore) {}
+                    }
+                });
+            }
+        }, "swp-news").start();
+    }
+
+    private static String fetchNews() {
+        HttpURLConnection c = null;
+        try {
+            c = (HttpURLConnection) new URL(NEWS_RSS).openConnection();
+            c.setConnectTimeout(20000);
+            c.setReadTimeout(20000);
+            c.setRequestProperty("User-Agent", "Mozilla/5.0");
+            if (c.getResponseCode() != 200) return null;
+            BufferedReader br = new BufferedReader(new InputStreamReader(c.getInputStream(), "UTF-8"));
+            StringBuilder sb = new StringBuilder();
+            String line;
+            while ((line = br.readLine()) != null) sb.append(line).append('\n');
+            br.close();
+            String xml = sb.toString();
+
+            StringBuilder out = new StringBuilder("📰  ");
+            int from = 0, taken = 0;
+            while (taken < 6) {
+                int it = xml.indexOf("<item>", from);
+                if (it < 0) break;
+                int ts = xml.indexOf("<title>", it);
+                int te = xml.indexOf("</title>", ts);
+                from = (te > 0) ? te : (it + 6);
+                if (ts < 0 || te < 0) continue;
+                String title = xml.substring(ts + 7, te).trim();
+                title = stripCdata(title);
+                title = unescape(title);
+                int dash = title.lastIndexOf(" - ");
+                if (dash > 20) title = title.substring(0, dash); // odstran " - Zdroj"
+                if (title.isEmpty()) continue;
+                if (taken > 0) out.append("      •      ");
+                out.append(title);
+                taken++;
+            }
+            return (taken > 0) ? out.toString() : null;
+        } catch (Throwable e) {
+            return null;
+        } finally {
+            if (c != null) try { c.disconnect(); } catch (Throwable ignore) {}
+        }
+    }
+
+    private static String stripCdata(String s) {
+        if (s.startsWith("<![CDATA[") && s.endsWith("]]>")) {
+            return s.substring(9, s.length() - 3);
+        }
+        return s;
+    }
+
+    private static String unescape(String s) {
+        return s.replace("&amp;", "&").replace("&lt;", "<").replace("&gt;", ">")
+                .replace("&quot;", "\"").replace("&#39;", "'").replace("&apos;", "'")
+                .replace("&nbsp;", " ");
     }
 
     // ---- meniny (SK kalendar mien) ----
