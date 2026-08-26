@@ -32,6 +32,7 @@ public final class SpravarenTabBar {
 
     private static boolean started = false;
     private static FrameLayout overlay;      // nas bar
+    private static LinearLayout rowRef;      // riadok s tabmi (vyska = natativny bar)
     private static int selected = 0;         // 0=Chaty,1=Oznamenia,2=Viac
     private static TabCell[] cells;
 
@@ -69,18 +70,34 @@ public final class SpravarenTabBar {
             return;
         }
 
-        // kontajner (rodic tabov) - pre vysku
-        ViewGroup content = (ViewGroup) decor.findViewById(android.R.id.content);
-        if (content == null) return;
-
-        int barH = ((View) byIndex[1].getParent()).getHeight();
+        View container = (View) byIndex[1].getParent();
+        int barH = container.getHeight();
         if (barH <= 0) barH = byIndex[1].getHeight();
         if (barH <= 0) return;
 
-        ensureOverlay(content, barH, byIndex);
+        // pozicia natativneho baru voci decor
+        int[] cloc = new int[2]; container.getLocationOnScreen(cloc);
+        int[] dloc = new int[2]; decorVg.getLocationOnScreen(dloc);
+        int top = cloc[1] - dloc[1];
+        int decorH = decorVg.getHeight();
+        int overlayH = decorH - top;          // az po spodok obrazovky -> ziadna diera dole
+        if (overlayH < barH) overlayH = barH;
+
+        ensureOverlay(decorVg, barH, byIndex);
+        // pozicuj overlay presne na natativny bar a natiahni po spodok
+        FrameLayout.LayoutParams lp = (FrameLayout.LayoutParams) overlay.getLayoutParams();
+        lp.width = FrameLayout.LayoutParams.MATCH_PARENT;
+        lp.height = overlayH;
+        lp.topMargin = top;
+        lp.gravity = Gravity.TOP | Gravity.START;
+        overlay.setLayoutParams(lp);
+        // riadok tabov drz na vysku natativneho baru (obsah hore)
+        if (rowRef != null) {
+            ViewGroup.LayoutParams rlp = rowRef.getLayoutParams();
+            if (rlp != null && rlp.height != barH) { rlp.height = barH; rowRef.setLayoutParams(rlp); }
+        }
         overlay.setVisibility(View.VISIBLE);
         overlay.bringToFront();
-        // ponuka: skry natativne popisky? nechavame ich za nasim opaknym barom
     }
 
     private static boolean isShown(View v) {
@@ -107,8 +124,8 @@ public final class SpravarenTabBar {
         }
     }
 
-    private static void ensureOverlay(ViewGroup content, int barH, View[] byIndex) {
-        if (overlay != null && overlay.getParent() == content) {
+    private static void ensureOverlay(ViewGroup parent, int barH, View[] byIndex) {
+        if (overlay != null && overlay.getParent() == parent) {
             // len preved delegaty (natativne taby sa mohli znovu vytvorit)
             if (cells != null) {
                 cells[0].target = byIndex[1];
@@ -117,7 +134,7 @@ public final class SpravarenTabBar {
             }
             return;
         }
-        Context ctx = content.getContext();
+        Context ctx = parent.getContext();
         FrameLayout fl = new FrameLayout(ctx);
         fl.setBackgroundColor(0xFF0A0A0A);
 
@@ -135,13 +152,15 @@ public final class SpravarenTabBar {
             row.addView(tc.view, lp);
         }
 
+        // riadok tabov ukotveny hore (obsah na urovni natativneho baru),
+        // FrameLayout pozadie natiahnute nizsie zakryje pripadnu dieru dole.
         fl.addView(row, new FrameLayout.LayoutParams(
-                FrameLayout.LayoutParams.MATCH_PARENT,
-                FrameLayout.LayoutParams.MATCH_PARENT));
+                FrameLayout.LayoutParams.MATCH_PARENT, barH, Gravity.TOP));
+        rowRef = row;
 
         FrameLayout.LayoutParams flp = new FrameLayout.LayoutParams(
-                FrameLayout.LayoutParams.MATCH_PARENT, barH, Gravity.BOTTOM);
-        content.addView(fl, flp);
+                FrameLayout.LayoutParams.MATCH_PARENT, barH, Gravity.TOP | Gravity.START);
+        parent.addView(fl, flp);
         overlay = fl;
         refreshSelection();
     }
@@ -150,11 +169,11 @@ public final class SpravarenTabBar {
         float d = ctx.getResources().getDisplayMetrics().density;
         LinearLayout cell = new LinearLayout(ctx);
         cell.setOrientation(LinearLayout.VERTICAL);
-        cell.setGravity(Gravity.CENTER);
-        cell.setPadding(0, (int) (6 * d), 0, (int) (14 * d));
+        cell.setGravity(Gravity.CENTER_HORIZONTAL | Gravity.TOP);
+        cell.setPadding(0, (int) (8 * d), 0, (int) (2 * d));
 
         IconView icon = new IconView(ctx, idx);
-        int is = (int) (24 * d);
+        int is = (int) (22 * d);
         LinearLayout.LayoutParams ilp = new LinearLayout.LayoutParams(is, is);
         cell.addView(icon, ilp);
 
