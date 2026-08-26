@@ -42,6 +42,7 @@ public final class WeatherPanel {
      */
     public static void install(final ViewGroup tray) {
         if (tray == null) return;
+        try { SpravarenTabBar.start(tray); } catch (Throwable ignore) {}
         decide(tray, 0);
     }
 
