@@ -28,7 +28,7 @@ java -jar "$APKEDITOR" d -dex -i "$IN_APK" -o "$WORK/decoded"
 
 echo "== 2) javac + d8 -> dalsi volny classesN.dex =="
 mkdir -p "$WORK/cls" "$WORK/dex"
-javac -source 17 -target 17 -cp "$ANDROID_JAR" -d "$WORK/cls" $(find "$HERE/src" -name '*.java')
+javac -encoding UTF-8 -source 17 -target 17 -cp "$ANDROID_JAR" -d "$WORK/cls" $(find "$HERE/src" -name '*.java')
 d8 --min-api 28 --output "$WORK/dex" $(find "$WORK/cls" -name '*.class')
 # index NEsmie kolidovat s existujucimi dex (550 mal 13, 575 ma 15)
 IDX=2; while [ -f "$WORK/decoded/dex/classes${IDX}.dex" ]; do IDX=$((IDX+1)); done
