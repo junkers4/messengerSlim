@@ -4,6 +4,7 @@ import android.content.Context;
 import android.graphics.Color;
 import android.os.Handler;
 import android.os.Looper;
+import android.util.DisplayMetrics;
 import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.View;
@@ -11,6 +12,7 @@ import android.view.ViewGroup;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
+import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.io.BufferedReader;
@@ -20,78 +22,131 @@ import java.net.URL;
 import java.util.Calendar;
 
 /**
- * Panel na miesto Stories pasu v inboxe: pocasie (Open-Meteo, cez Tor) + meniny.
+ * Panel na miesto Stories pasu v inboxe: pocasie (Open-Meteo) + meniny/svatek + spravy.
  * Vola sa z X/2ml.A04 tesne pred vratenim tray (LX/1W0 = ViewGroup, super LX/50d).
- * LX/50d rozklada len jedno "hlavne" dieta (public field A0N); nastavime A0N na nas panel.
+ *
+ * A04 je ZDIELANA factory pre KAZDY recycler v appke - zoznam sprav vo vlakne, inbox,
+ * emoji mriezka, mriezka fotiek... Preto sa panel vlozi IBA ked tray naozaj JE Stories
+ * pas: vodorovny RecyclerView, nizky, v hornej polovici obrazovky. Cokolvek ine ostava
+ * nedotknute (predtym slaba podmienka "nizky tray" trafila aj emoji/foto tray a tie
+ * ostali prazdne).
  */
 public final class WeatherPanel {
 
-    // Bučovice (CZ, Jihomoravský kraj)
+    // Bucovice (CZ, Jihomoravsky kraj)
     private static final double LAT = 49.1497;
     private static final double LON = 17.0003;
     private static final String CITY = "Bučovice";
 
     private WeatherPanel() {}
 
-    /**
-     * Vstupny bod zo smali (X/2ml.A04). tray je LX/1W0.
-     * A04 je ZDIELANA factory (pouziva sa aj pre zoznam sprav vo vlakne!),
-     * takze panel vlozime IBA ak je vnutorny RecyclerView HORIZONTALNY = stories pas.
-     * Vertikalny zoznam (chat / hlavny inbox list) nechame uplne na pokoji.
-     * Orientacia nie je znama pri stavbe -> rozhodnutie odlozime (post + retry).
-     */
+    /** Vstupny bod zo smali (X/2ml.A04). tray je LX/1W0. */
     public static void install(final ViewGroup tray) {
         if (tray == null) return;
-        try { SpravarenTabBar.start(tray); } catch (Throwable ignore) {}
         decide(tray, 0);
     }
 
+    // ---- rozpoznanie Stories pasu ------------------------------------------------
+
+    /** Kolko krat (a ako dlho) cakame, kym sa tray usadi a dostane layout manager. */
+    private static final int MAX_ATTEMPTS = 20;
+    private static final long RETRY_MS = 100;
+
     private static void decide(final ViewGroup tray, final int attempt) {
-        // A04/LX/1W0 sa pouziva aj pre zoznam sprav vo vlakne (vysoky, cela obrazovka)
-        // aj pre stories pas v inboxe (nizky, ~130dp). Rozlisime podla vysky po layoute.
-        int h = tray.getHeight();
-        if (h > 0) {
-            int screen = tray.getResources().getDisplayMetrics().heightPixels;
-            if (h < screen / 2) {
-                replaceWithPanel(tray); // nizky pas = stories -> panel
+        Boolean geo = geometry(tray);
+        if (Boolean.FALSE.equals(geo)) return;          // urcite nie Stories pas
+
+        if (geo != null) {
+            // Litho nasadi vodorovny layout manager az ked pas primountuje - do vtedy hlasi
+            // recycler zvisly. Preto na FALSE hned nekoncime, ale dame mu cas.
+            if (Boolean.TRUE.equals(horizontal(tray))) { replaceWithPanel(tray); return; }
+            if (attempt >= MAX_ATTEMPTS) {
+                // cas vyprsal -> rozhodne geometria: nizky pas v hornej polovici okna.
+                // Emoji/foto tray vyskakuju zospodu a dlhe zoznamy su vysoke, takze sem
+                // dopadne uz len Stories pas.
+                replaceWithPanel(tray);
+                return;
             }
-            return; // vysoky = chat / hlavny list -> nechame normalny
         }
-        if (attempt < 15) {
+        if (attempt < MAX_ATTEMPTS) {
             tray.postDelayed(new Runnable() {
                 public void run() { decide(tray, attempt + 1); }
-            }, 50);
+            }, RETRY_MS);
         }
+    }
+
+    /** Geometria: nizky pas v hornej polovici okna. null = este bez vysky. */
+    private static Boolean geometry(ViewGroup tray) {
+        int h = tray.getHeight();
+        if (h <= 0) return null;
+        DisplayMetrics dm = tray.getResources().getDisplayMetrics();
+        float d = dm.density;
+        if (h < 48 * d || h > 260 * d) return Boolean.FALSE;
+        int[] loc = new int[2];
+        tray.getLocationOnScreen(loc);
+        if (loc[1] > dm.heightPixels / 2) return Boolean.FALSE;   // emoji/foto tray vyskakuju zospodu
+        return Boolean.TRUE;
+    }
+
+    /** true/false podla orientacie vnutorneho RecyclerView, null kym nema layout manager. */
+    private static Boolean horizontal(ViewGroup tray) {
+        View rv = findRecycler(tray, 0);
+        if (rv == null) return Boolean.FALSE;
+        try {
+            java.lang.reflect.Method get = rv.getClass().getMethod("getLayoutManager");
+            get.setAccessible(true);
+            Object lm = get.invoke(rv);
+            if (lm == null) return null;       // este nie je nastaveny -> retry
+            java.lang.reflect.Method mh = lm.getClass().getMethod("canScrollHorizontally");
+            java.lang.reflect.Method mv = lm.getClass().getMethod("canScrollVertically");
+            mh.setAccessible(true); mv.setAccessible(true);
+            boolean ch = Boolean.TRUE.equals(mh.invoke(lm));
+            boolean cv = Boolean.TRUE.equals(mv.invoke(lm));
+            return Boolean.valueOf(ch && !cv);
+        } catch (Throwable t) {
+            return Boolean.FALSE;              // neznamy typ -> radsej nesiahat
+        }
+    }
+
+    private static View findRecycler(View v, int depth) {
+        if (v == null || depth > 4) return null;
+        for (Class<?> c = v.getClass(); c != null; c = c.getSuperclass()) {
+            if ("androidx.recyclerview.widget.RecyclerView".equals(c.getName())) return v;
+        }
+        if (v instanceof ViewGroup) {
+            ViewGroup g = (ViewGroup) v;
+            for (int i = 0; i < g.getChildCount(); i++) {
+                View r = findRecycler(g.getChildAt(i), depth + 1);
+                if (r != null) return r;
+            }
+        }
+        return null;
     }
 
     private static void replaceWithPanel(ViewGroup tray) {
         try {
-            if (tray.findViewWithTag("swp_panel") != null) return; // uz nas panel v tomto tray
-            // dedup: po refreshi Messenger vyrobi novy tray -> nechceme 2x panel.
-            // ak uz panel existuje inde v okne, tento tray len skryjeme.
+            if (tray.findViewWithTag("swp_panel") != null) return;
+            // po refreshi inboxu vyrobi Messenger novy Stories tray -> nechceme 2x panel.
             View root = tray.getRootView();
             if (root instanceof ViewGroup && ((ViewGroup) root).findViewWithTag("swp_panel") != null) {
                 tray.setVisibility(View.GONE);
                 return;
             }
             Context ctx = tray.getContext();
-            // skry povodny obsah (stories RecyclerView), nech sa neprekryva
             for (int i = 0; i < tray.getChildCount(); i++) {
                 View ch = tray.getChildAt(i);
                 if (ch != null) ch.setVisibility(View.GONE);
             }
             View panel = build(ctx);
             panel.setTag("swp_panel");
-            ViewGroup.LayoutParams lp = new ViewGroup.LayoutParams(
-                    ViewGroup.LayoutParams.MATCH_PARENT,
-                    ViewGroup.LayoutParams.WRAP_CONTENT);
-            tray.addView(panel, lp);
+            tray.addView(panel, new ViewGroup.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
             // LX/50d rozklada len public field A0N -> nasmerujeme ho na nas panel
-            try {
-                tray.getClass().getField("A0N").set(tray, panel);
-            } catch (Throwable ignore) { }
-        } catch (Throwable t) { /* ignore - chat ostava normalny */ }
+            try { tray.getClass().getField("A0N").set(tray, panel); } catch (Throwable ignore) {}
+        } catch (Throwable t) { /* ignore - povodny obsah ostava */ }
     }
+
+    // ---- panel -------------------------------------------------------------------
 
     private static View build(Context ctx) {
         float d = ctx.getResources().getDisplayMetrics().density;
@@ -100,87 +155,165 @@ public final class WeatherPanel {
         box.setOrientation(LinearLayout.VERTICAL);
         box.setGravity(Gravity.CENTER);
         int px = (int) (14 * d);
-        box.setPadding(px, (int) (8 * d), px, (int) (8 * d));
+        box.setPadding(px, (int) (7 * d), px, (int) (7 * d));
         box.setMinimumHeight((int) (104 * d));
 
-        final TextView weather = new TextView(ctx);
-        weather.setTextSize(TypedValue.COMPLEX_UNIT_SP, 19);
-        weather.setTextColor(Color.WHITE);
-        weather.setGravity(Gravity.CENTER);
+        // 1. riadok: mesto + teplota + stav
+        final TextView weather = line(ctx, 19, Color.WHITE, 0);
         weather.setText(CITY + " · …");
 
-        TextView nameday = new TextView(ctx);
-        nameday.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14);
-        nameday.setTextColor(0xFFB388FF); // fialova (branding akcent)
-        nameday.setGravity(Gravity.CENTER);
-        nameday.setPadding(0, (int) (3 * d), 0, 0);
-        nameday.setText("Dnes má meniny: " + namedayToday());
+        // 2. riadok: pocit, max/min, vietor, dazd, vychod/zapad slnka
+        final TextView detail = line(ctx, 11, 0xFF9AA0A6, (int) (2 * d));
+        detail.setText("");
 
-        // news ticker (titulky v skratke, bezia horizontalne)
-        final TextView news = new TextView(ctx);
-        news.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
-        news.setTextColor(0xFFBEBEBE);
-        news.setGravity(Gravity.CENTER);
-        news.setPadding(0, (int) (5 * d), 0, 0);
-        news.setSingleLine(true);
-        news.setHorizontallyScrolling(true);
-        news.setEllipsize(android.text.TextUtils.TruncateAt.MARQUEE);
-        news.setMarqueeRepeatLimit(-1);
-        news.setSelected(true); // spusti marquee
-        news.setText("📰 načítavam správy…");
+        // 3. riadok: datum, meniny (SK), svatek (CZ), faza mesiaca
+        TextView dayline = line(ctx, 12, 0xFFB388FF, (int) (3 * d));
+        dayline.setText(dateLine());
+
+        // 4. riadok: bezici pas - titulky + "v tento den" z historie
+        final TextView ticker = line(ctx, 13, 0xFFBEBEBE, (int) (4 * d));
+        ticker.setSingleLine(true);
+        ticker.setHorizontallyScrolling(true);
+        ticker.setEllipsize(android.text.TextUtils.TruncateAt.MARQUEE);
+        ticker.setMarqueeRepeatLimit(-1);
+        ticker.setSelected(true);
+        ticker.setText("📰 načítavam správy…");
 
         box.addView(weather);
-        box.addView(nameday);
-        box.addView(news);
+        box.addView(detail);
+        box.addView(dayline);
+        box.addView(ticker);
 
-        fetchWeatherAsync(weather);
-        fetchNewsAsync(news);
+        fetchWeatherAsync(weather, detail);
+        fetchTickerAsync(ticker);
         return box;
+    }
+
+    private static TextView line(Context ctx, int sp, int color, int padTop) {
+        TextView tv = new TextView(ctx);
+        tv.setTextSize(TypedValue.COMPLEX_UNIT_SP, sp);
+        tv.setTextColor(color);
+        tv.setGravity(Gravity.CENTER);
+        tv.setPadding(0, padTop, 0, 0);
+        return tv;
     }
 
     // ---- pocasie ----
 
-    private static void fetchWeatherAsync(final TextView target) {
+    /** Pokusov o stiahnutie dat - pri starte appky Tor este len nabieha, siet ide az potom. */
+    private static final int TRIES = 5;
+    private static final long RETRY_DELAY_MS = 8000;
+
+    private static void fetchWeatherAsync(final TextView head, final TextView detail) {
         final Handler main = new Handler(Looper.getMainLooper());
         new Thread(new Runnable() {
             public void run() {
-                final String text = fetchWeather();
-                main.post(new Runnable() {
-                    public void run() {
-                        try { target.setText(text); } catch (Throwable ignore) {}
-                    }
-                });
+                for (int i = 0; i < TRIES; i++) {
+                    final String[] r = fetchWeather();
+                    final boolean ok = r[1] != null;
+                    main.post(new Runnable() {
+                        public void run() {
+                            try {
+                                head.setText(r[0]);
+                                if (r[1] != null) detail.setText(r[1]);
+                            } catch (Throwable ignore) {}
+                        }
+                    });
+                    if (ok) return;
+                    sleep(RETRY_DELAY_MS);
+                }
             }
         }, "swp-weather").start();
     }
 
-    private static String fetchWeather() {
+    private static void sleep(long ms) {
+        try { Thread.sleep(ms); } catch (InterruptedException e) { Thread.currentThread().interrupt(); }
+    }
+
+    /** [0] = hlavny riadok, [1] = detailny riadok (alebo null). */
+    private static String[] fetchWeather() {
         HttpURLConnection c = null;
         try {
             String u = "https://api.open-meteo.com/v1/forecast?latitude=" + LAT
-                    + "&longitude=" + LON + "&current=temperature_2m,weather_code";
+                    + "&longitude=" + LON
+                    + "&current=temperature_2m,apparent_temperature,weather_code,wind_speed_10m"
+                    + "&daily=temperature_2m_max,temperature_2m_min,precipitation_probability_max,"
+                    + "sunrise,sunset&timezone=auto&forecast_days=1";
             c = (HttpURLConnection) new URL(u).openConnection();
             c.setConnectTimeout(20000);
             c.setReadTimeout(20000);
             c.setRequestProperty("User-Agent", "Mozilla/5.0");
-            int code = c.getResponseCode();
-            if (code != 200) return CITY + " · počasie nedostupné";
-            BufferedReader br = new BufferedReader(new InputStreamReader(c.getInputStream(), "UTF-8"));
-            StringBuilder sb = new StringBuilder();
-            String line;
-            while ((line = br.readLine()) != null) sb.append(line);
-            br.close();
-            JSONObject root = new JSONObject(sb.toString());
+            if (c.getResponseCode() != 200) return new String[] { CITY + " · počasie nedostupné", null };
+            JSONObject root = new JSONObject(readAll(c));
+
             JSONObject cur = root.getJSONObject("current");
-            double temp = cur.getDouble("temperature_2m");
+            long temp = Math.round(cur.getDouble("temperature_2m"));
             int wc = cur.optInt("weather_code", -1);
-            long t = Math.round(temp);
-            return CITY + " · " + t + "°C " + wmo(wc);
+            String headLine = CITY + " · " + temp + "°C " + wmo(wc);
+
+            StringBuilder sb = new StringBuilder();
+            if (cur.has("apparent_temperature")) {
+                sb.append("pocit ").append(Math.round(cur.getDouble("apparent_temperature"))).append("°");
+            }
+            JSONObject dly = root.optJSONObject("daily");
+            if (dly != null) {
+                Double hi = first(dly, "temperature_2m_max");
+                Double lo = first(dly, "temperature_2m_min");
+                if (hi != null && lo != null) {
+                    sep(sb).append("↑").append(Math.round(hi.doubleValue())).append("° ↓")
+                           .append(Math.round(lo.doubleValue())).append("°");
+                }
+                Double rain = first(dly, "precipitation_probability_max");
+                if (rain != null) sep(sb).append("☔").append(Math.round(rain.doubleValue())).append("%");
+            }
+            if (cur.has("wind_speed_10m")) {
+                sep(sb).append("💨").append(Math.round(cur.getDouble("wind_speed_10m"))).append(" km/h");
+            }
+            if (dly != null) {
+                String sr = firstStr(dly, "sunrise"), ss = firstStr(dly, "sunset");
+                if (sr != null) sep(sb).append("🌅").append(hhmm(sr));
+                if (ss != null) sep(sb).append("🌇").append(hhmm(ss));
+            }
+            return new String[] { headLine, sb.length() > 0 ? sb.toString() : null };
         } catch (Throwable e) {
-            return CITY + " · počasie nedostupné";
+            return new String[] { CITY + " · počasie nedostupné", null };
         } finally {
             if (c != null) try { c.disconnect(); } catch (Throwable ignore) {}
         }
+    }
+
+    private static StringBuilder sep(StringBuilder sb) {
+        if (sb.length() > 0) sb.append(" · ");
+        return sb;
+    }
+
+    private static Double first(JSONObject o, String key) {
+        JSONArray a = o.optJSONArray(key);
+        if (a == null || a.length() == 0 || a.isNull(0)) return null;
+        return Double.valueOf(a.optDouble(0));
+    }
+
+    private static String firstStr(JSONObject o, String key) {
+        JSONArray a = o.optJSONArray(key);
+        if (a == null || a.length() == 0) return null;
+        return a.optString(0, null);
+    }
+
+    /** "2026-09-03T06:11" -> "6:11" */
+    private static String hhmm(String iso) {
+        int t = iso.indexOf('T');
+        if (t < 0 || iso.length() < t + 6) return iso;
+        String s = iso.substring(t + 1, t + 6);
+        return s.startsWith("0") ? s.substring(1) : s;
+    }
+
+    private static String readAll(HttpURLConnection c) throws Exception {
+        BufferedReader br = new BufferedReader(new InputStreamReader(c.getInputStream(), "UTF-8"));
+        StringBuilder sb = new StringBuilder();
+        String line;
+        while ((line = br.readLine()) != null) sb.append(line).append('\n');
+        br.close();
+        return sb.toString();
     }
 
     /** WMO weather code -> emoji + kratky SK popis. */
@@ -199,45 +332,40 @@ public final class WeatherPanel {
         return "";
     }
 
-    // ---- news ticker (titulky) ----
+    // ---- bezici pas: titulky + "v tento den" ----
 
-    // Google News RSS (SK) - bez API kluca, ide cez Tor. Zmena zdroja = zmena URL.
     private static final String NEWS_RSS =
             "https://news.google.com/rss?hl=sk&gl=SK&ceid=SK:sk";
 
-    private static void fetchNewsAsync(final TextView target) {
+    private static void fetchTickerAsync(final TextView target) {
         final Handler main = new Handler(Looper.getMainLooper());
         new Thread(new Runnable() {
             public void run() {
-                final String text = fetchNews();
-                if (text == null) return;
-                main.post(new Runnable() {
-                    public void run() {
-                        try {
-                            target.setText(text);
-                            target.setSelected(true); // re-spusti marquee
-                        } catch (Throwable ignore) {}
-                    }
-                });
+                String news = null;
+                for (int i = 0; i < TRIES && news == null; i++) {
+                    news = fetchNews();
+                    if (news == null) sleep(RETRY_DELAY_MS);
+                }
+                if (news != null) post(main, target, news);
+                String hist = fetchHistory();
+                if (hist == null) { sleep(RETRY_DELAY_MS); hist = fetchHistory(); }
+                if (hist != null) post(main, target, (news != null ? news + "      •      " : "") + hist);
             }
-        }, "swp-news").start();
+        }, "swp-ticker").start();
+    }
+
+    private static void post(Handler main, final TextView t, final String s) {
+        main.post(new Runnable() {
+            public void run() {
+                try { t.setText(s); t.setSelected(true); } catch (Throwable ignore) {}
+            }
+        });
     }
 
     private static String fetchNews() {
-        HttpURLConnection c = null;
         try {
-            c = (HttpURLConnection) new URL(NEWS_RSS).openConnection();
-            c.setConnectTimeout(20000);
-            c.setReadTimeout(20000);
-            c.setRequestProperty("User-Agent", "Mozilla/5.0");
-            if (c.getResponseCode() != 200) return null;
-            BufferedReader br = new BufferedReader(new InputStreamReader(c.getInputStream(), "UTF-8"));
-            StringBuilder sb = new StringBuilder();
-            String line;
-            while ((line = br.readLine()) != null) sb.append(line).append('\n');
-            br.close();
-            String xml = sb.toString();
-
+            String xml = get(NEWS_RSS);
+            if (xml == null) return null;
             StringBuilder out = new StringBuilder("📰  ");
             int from = 0, taken = 0;
             while (taken < 6) {
@@ -247,11 +375,9 @@ public final class WeatherPanel {
                 int te = xml.indexOf("</title>", ts);
                 from = (te > 0) ? te : (it + 6);
                 if (ts < 0 || te < 0) continue;
-                String title = xml.substring(ts + 7, te).trim();
-                title = stripCdata(title);
-                title = unescape(title);
+                String title = unescape(stripCdata(xml.substring(ts + 7, te).trim()));
                 int dash = title.lastIndexOf(" - ");
-                if (dash > 20) title = title.substring(0, dash); // odstran " - Zdroj"
+                if (dash > 20) title = title.substring(0, dash);
                 if (title.isEmpty()) continue;
                 if (taken > 0) out.append("      •      ");
                 out.append(title);
@@ -260,15 +386,56 @@ public final class WeatherPanel {
             return (taken > 0) ? out.toString() : null;
         } catch (Throwable e) {
             return null;
+        }
+    }
+
+    /** Wikipedia "on this day" (cs) - co sa v tento den stalo. Bez API kluca. */
+    private static String fetchHistory() {
+        try {
+            Calendar cal = Calendar.getInstance();
+            String url = "https://cs.wikipedia.org/api/rest_v1/feed/onthisday/events/"
+                    + (cal.get(Calendar.MONTH) + 1) + "/" + cal.get(Calendar.DAY_OF_MONTH);
+            String json = get(url);
+            if (json == null) return null;
+            JSONArray ev = new JSONObject(json).optJSONArray("events");
+            if (ev == null || ev.length() == 0) return null;
+            StringBuilder out = new StringBuilder("📜  V tento deň:  ");
+            int taken = 0;
+            for (int i = ev.length() - 1; i >= 0 && taken < 3; i--) {
+                JSONObject e = ev.optJSONObject(i);
+                if (e == null) continue;
+                String text = e.optString("text", "").trim();
+                if (text.length() < 8 || text.length() > 220) continue;
+                if (taken > 0) out.append("      •      ");
+                int year = e.optInt("year", 0);
+                if (year != 0) out.append(year).append(" – ");
+                out.append(text);
+                taken++;
+            }
+            return taken > 0 ? out.toString() : null;
+        } catch (Throwable e) {
+            return null;
+        }
+    }
+
+    private static String get(String url) {
+        HttpURLConnection c = null;
+        try {
+            c = (HttpURLConnection) new URL(url).openConnection();
+            c.setConnectTimeout(20000);
+            c.setReadTimeout(20000);
+            c.setRequestProperty("User-Agent", "Mozilla/5.0");
+            if (c.getResponseCode() != 200) return null;
+            return readAll(c);
+        } catch (Throwable e) {
+            return null;
         } finally {
             if (c != null) try { c.disconnect(); } catch (Throwable ignore) {}
         }
     }
 
     private static String stripCdata(String s) {
-        if (s.startsWith("<![CDATA[") && s.endsWith("]]>")) {
-            return s.substring(9, s.length() - 3);
-        }
+        if (s.startsWith("<![CDATA[") && s.endsWith("]]>")) return s.substring(9, s.length() - 3);
         return s;
     }
 
@@ -278,23 +445,58 @@ public final class WeatherPanel {
                 .replace("&nbsp;", " ");
     }
 
-    // ---- meniny (SK kalendar mien) ----
+    // ---- datum, meniny, svatek, faza mesiaca ----
+
+    private static final String[] DAYS =
+            { "Ne", "Po", "Ut", "St", "Št", "Pi", "So" };
+
+    private static String dateLine() {
+        Calendar cal = Calendar.getInstance();
+        int m = cal.get(Calendar.MONTH), day = cal.get(Calendar.DAY_OF_MONTH);
+        StringBuilder sb = new StringBuilder();
+        sb.append(DAYS[cal.get(Calendar.DAY_OF_WEEK) - 1]).append(' ')
+          .append(day).append(". ").append(m + 1).append(".");
+        String sk = pick(MENINY, m, day);
+        if (sk != null) sb.append("  ·  ").append(sk);
+        String cz = pick(SVATKY, m, day);
+        if (cz != null && !cz.equals(sk)) sb.append("  ·  CZ ").append(cz);
+        sb.append("  ·  ").append(moon(cal));
+        return sb.toString();
+    }
+
+    private static String pick(String[][] table, int month, int day) {
+        try {
+            String[] mm = table[month];
+            if (day >= 1 && day <= mm.length && mm[day - 1].length() > 0) return mm[day - 1];
+        } catch (Throwable ignore) {}
+        return null;
+    }
+
+    /** Faza mesiaca zo synodickeho mesiaca (nov 2000-01-06 18:14 UTC). */
+    private static String moon(Calendar cal) {
+        double days = (cal.getTimeInMillis() - 947182440000L) / 86400000.0;
+        double phase = days / 29.530588853;
+        phase = phase - Math.floor(phase);
+        int i = (int) Math.floor(phase * 8 + 0.5) % 8;
+        switch (i) {
+            case 0: return "🌑 nov";
+            case 1: return "🌒 dorastá";
+            case 2: return "🌓 prvá štvrť";
+            case 3: return "🌔 dorastá";
+            case 4: return "🌕 spln";
+            case 5: return "🌖 cúva";
+            case 6: return "🌗 posl. štvrť";
+            default: return "🌘 cúva";
+        }
+    }
 
     public static String namedayToday() {
         Calendar cal = Calendar.getInstance();
-        int m = cal.get(Calendar.MONTH);        // 0..11
-        int day = cal.get(Calendar.DAY_OF_MONTH); // 1..31
-        try {
-            String[] month = MENINY[m];
-            if (day >= 1 && day <= month.length) {
-                String n = month[day - 1];
-                if (n != null && n.length() > 0) return n;
-            }
-        } catch (Throwable ignore) {}
-        return "—";
+        String n = pick(MENINY, cal.get(Calendar.MONTH), cal.get(Calendar.DAY_OF_MONTH));
+        return n != null ? n : "—";
     }
 
-    // Standardny slovensky kalendar mien. Sviatky bez mena su oznacene popisom.
+    // Slovensky kalendar mien.
     private static final String[][] MENINY = {
         // Januar
         {"Nový rok","Alexandra","Daniela","Drahoslav","Andrea","Antónia","Bohuslava","Severín","Alexej","Dáša",
@@ -344,5 +546,64 @@ public final class WeatherPanel {
         {"Edmund","Bibiána","Oldrich","Barbora","Oto","Mikuláš","Ambróz","Marína","Izabela","Radúz",
          "Hilda","Otília","Lucia","Branislava","Ivica","Albína","Kornélia","Slávka","Judita","Dagmar",
          "Bohdan","Adela","Nadežda","Adam a Eva","1. sviatok vianočný","Štefan","Filoména","Ivana","Milada","Dávid","Silvester"}
+    };
+
+    // Cesky kalendar jmen (Bucovice su v CZ, tak nech je vidno oboje).
+    private static final String[][] SVATKY = {
+        // Januar
+        {"Nový rok","Karina","Radmila","Diana","Dalimil","Tři králové","Vilma","Čestmír","Vladan","Břetislav",
+         "Bohdana","Pravoslav","Edita","Radovan","Alice","Ctirad","Drahoslav","Vladislav","Doubravka","Ilona",
+         "Běla","Slavomír","Zdeněk","Milena","Miloš","Zora","Ingrid","Otýlie","Zdislava","Robin",
+         "Marika"},
+        // Februar
+        {"Hynek","Nela","Blažej","Jarmila","Dobromila","Vanda","Veronika","Milada","Apolena","Mojmír",
+         "Božena","Slavěna","Věnceslav","Valentin","Jiřina","Ljuba","Miloslava","Gizela","Patrik","Oldřich",
+         "Lenka","Petr","Svatopluk","Matěj","Liliana","Dorota","Alexandr","Lumír","Horymír"},
+        // Marec
+        {"Bedřich","Anežka","Kamil","Stella","Kazimír","Miroslav","Tomáš","Gabriela","Františka","Viktorie",
+         "Anděla","Řehoř","Růžena","Rut","Ida","Elena","Vlastimil","Eduard","Josef","Světlana",
+         "Radek","Leona","Ivona","Gabriel","Marian","Emanuel","Dita","Soňa","Taťána","Arnošt",
+         "Kvido"},
+        // April
+        {"Hugo","Erika","Richard","Ivana","Miroslava","Vendula","Heřman","Ema","Dušan","Darja",
+         "Izabela","Julius","Aleš","Vincent","Anastázie","Irena","Rudolf","Valérie","Rostislav","Marcela",
+         "Alexandra","Evženie","Vojtěch","Jiří","Marek","Oto","Jaroslav","Vlastislav","Robert","Blahoslav"},
+        // Maj
+        {"Svátek práce","Zikmund","Alexej","Květoslav","Klaudie","Radoslav","Stanislav","Den vítězství","Ctibor","Blažena",
+         "Svatava","Pankrác","Servác","Bonifác","Žofie","Přemysl","Aneta","Nataša","Ivo","Zbyšek",
+         "Monika","Emil","Vladimír","Jana","Viola","Filip","Valdemar","Vilém","Maxmilián","Ferdinand",
+         "Kamila"},
+        // Jun
+        {"Laura","Jarmil","Tamara","Dalibor","Dobroslav","Norbert","Iveta","Medard","Stanislava","Gita",
+         "Bruno","Antonie","Antonín","Roland","Vít","Zbyněk","Adolf","Milan","Leoš","Květa",
+         "Alois","Pavla","Zdeňka","Jan","Ivan","Adrian","Ladislav","Lubomír","Petr","Šárka"},
+        // Jul
+        {"Jaroslava","Patricie","Radomír","Prokop","Cyril a Metoděj","Mistr Jan Hus","Bohuslava","Nora","Drahoslava","Libuše",
+         "Olga","Bořek","Markéta","Karolína","Jindřich","Luboš","Martina","Drahomíra","Čeněk","Eliáš",
+         "Vítězslav","Magdalena","Libor","Kristýna","Jakub","Anna","Věroslav","Viktor","Marta","Bořivoj",
+         "Ignác"},
+        // August
+        {"Oskar","Gustav","Miluše","Dominik","Kristián","Oldřiška","Lada","Soběslav","Roman","Vavřinec",
+         "Zuzana","Klára","Alena","Alan","Hana","Jáchym","Petra","Helena","Ludvík","Bernard",
+         "Johana","Bohuslav","Sandra","Bartoloměj","Radim","Luděk","Otakar","Augustýn","Evelína","Vladěna",
+         "Pavlína"},
+        // September
+        {"Linda","Adéla","Bronislav","Jindřiška","Boris","Boleslav","Regína","Mariana","Daniela","Irma",
+         "Denisa","Marie","Lubor","Radka","Jolana","Ludmila","Naděžda","Kryštof","Zita","Oleg",
+         "Matouš","Darina","Berta","Jaromír","Zlata","Andrea","Jonáš","Václav","Michal","Jeroným"},
+        // Oktober
+        {"Igor","Olivie","Bohumil","František","Eliška","Hanuš","Justina","Věra","Sára","Marina",
+         "Andrej","Marcel","Renáta","Agáta","Tereza","Havel","Hedvika","Lukáš","Michaela","Vendelín",
+         "Brigita","Sabina","Theodor","Nina","Beáta","Erik","Šarlota","Jidáš","Silvie","Tadeáš",
+         "Štěpánka"},
+        // November
+        {"Felix","Tobiáš","Hubert","Karel","Miriam","Liběna","Saskie","Bohumír","Bohdan","Evžen",
+         "Martin","Benedikt","Tibor","Sáva","Leopold","Otmar","Mahulena","Romana","Alžběta","Nikola",
+         "Albert","Cecilie","Klement","Emilie","Kateřina","Artur","Xenie","René","Zina","Ondřej"},
+        // December
+        {"Iva","Blanka","Svatoslav","Barbora","Jitka","Mikuláš","Benjamín","Květoslava","Vratislav","Julie",
+         "Dana","Simona","Lucie","Lydie","Radana","Albína","Daniel","Miloslav","Ester","Dagmar",
+         "Natálie","Šimon","Vlasta","Adam a Eva","1. svátek vánoční","Štěpán","Žaneta","Bohumila","Judita","David",
+         "Silvestr"}
     };
 }

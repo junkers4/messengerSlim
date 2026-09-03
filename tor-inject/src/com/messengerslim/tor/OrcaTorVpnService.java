@@ -85,6 +85,9 @@ public class OrcaTorVpnService extends VpnService {
         try { marker(this).delete(); } catch (Throwable ignored) {}
     }
 
+    /** Stav bootstrapu pre UI v hlavnom procese (pruh "Pripajam sa cez Tor..."). */
+    private void status(String s) { TorStatus.write(this, s); }
+
     private ParcelFileDescriptor tun;
     private TorController tor;
     private final TProxyService tproxy = new TProxyService();
@@ -93,12 +96,13 @@ public class OrcaTorVpnService extends VpnService {
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         if (intent != null && ACTION_STOP.equals(intent.getAction())) {
-            stopAll(); stopSelf(); return START_NOT_STICKY;
+            stopAll(); stopSelf(); quit(); return START_NOT_STICKY;
         }
         if (intent != null && ACTION_SLEEP.equals(intent.getAction())) {
             Log.i(TAG, "Messenger zavrety/v pozadi -> Tor aj tunel dole, VPN kluc zmizne");
             stopAll();
             stopSelf();
+            quit();
             return START_NOT_STICKY;
         }
         // Foreground HNED na main threade - splni FGS kontrakt v okne, ktore Android dava
@@ -112,6 +116,7 @@ public class OrcaTorVpnService extends VpnService {
     }
 
     private void startAll() {
+        status("0");
         java.util.LinkedHashSet<Long> excl = new java.util.LinkedHashSet<>();
         try {
             tor = new TorController(this, SOCKS, DNSP);
@@ -145,6 +150,7 @@ public class OrcaTorVpnService extends VpnService {
             long stallAt  = System.currentTimeMillis() + STALL_OPEN_MS;
             boolean opened = false;
             while (!tor.bootstrapped) {
+                status(String.valueOf(Math.min(99, tor.bootstrapPercent)));
                 if (tor.died) { Log.e(TAG, "Tor spadol pocas bootstrapu -> ostava blackhole"); blackhole(); return; }
                 if (System.currentTimeMillis() > deadline) { Log.e(TAG, "Bootstrap timeout -> ostava blackhole"); blackhole(); return; }
                 if (!opened) {
@@ -181,6 +187,7 @@ public class OrcaTorVpnService extends VpnService {
             tproxyRunning = true;
 
             READY = true;
+            status(TorStatus.READY);
             Log.i(TAG, "Messenger je teraz smerovany cez Tor.");
             startWatchdog();
         } catch (Throwable t) {
@@ -222,6 +229,7 @@ public class OrcaTorVpnService extends VpnService {
     /** Fail-closed: Tor stoji, tunel ostava bez hev = Messenger bez siete. Nikdy nie priamo von. */
     private void blackhole() {
         READY = false;
+        status(TorStatus.DOWN);
         if (tproxyRunning) { try { tproxy.TProxyStopService(); } catch (Throwable ignored) {} tproxyRunning = false; }
         if (tor != null) { try { tor.stop(); } catch (Throwable ignored) {} }
         ParcelFileDescriptor n = buildTun(null);   // route-all, bez hev
@@ -284,11 +292,24 @@ public class OrcaTorVpnService extends VpnService {
 
     private void stopAll() {
         running = false; READY = false;
+        status(TorStatus.DOWN);
         markTunnelDown();
         if (tproxyRunning) { try { tproxy.TProxyStopService(); } catch (Throwable ignored) {} tproxyRunning = false; }
         if (tor != null) { try { tor.stop(); } catch (Throwable ignored) {} tor = null; }
         if (tun != null) { try { tun.close(); } catch (Exception ignored) {} tun = null; }
         try { stopForeground(true); } catch (Throwable ignored) {}
+    }
+
+    /**
+     * :tor proces po zlozeni tunela zostaval visiet ako prazdny cached proces. Nic uz nerobi,
+     * ale nech po zavreti Messengera nezostane po Tore vobec nic.
+     */
+    private void quit() {
+        new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(new Runnable() {
+            @Override public void run() {
+                android.os.Process.killProcess(android.os.Process.myPid());
+            }
+        }, 800);
     }
 
     @Override public void onDestroy() { stopAll(); super.onDestroy(); }

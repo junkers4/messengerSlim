@@ -32,6 +32,10 @@ WAKE_ACTIONS = {
     "com.nokia.pushnotifications.intent.REGISTRATION",
     "android.net.conn.CONNECTIVITY_CHANGE",
     "android.intent.action.USER_PRESENT",
+    # sync framework: Android si sam bindne SyncAdapter/Authenticator a tym restartuje
+    # proces Messengera aj po tom, co sme ho zabili (videne: MessengerSyncAdapterService).
+    "android.content.SyncAdapter",
+    "android.accounts.AccountAuthenticator",
 }
 
 def filter_has_wake(comp):

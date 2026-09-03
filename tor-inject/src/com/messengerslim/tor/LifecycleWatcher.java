@@ -19,8 +19,8 @@ import android.util.Log;
 public class LifecycleWatcher implements Application.ActivityLifecycleCallbacks {
 
     private static final String TAG = "OrcaTor";
-    private static final long GRACE_MS = 30_000;      // 30s v pozadi -> zhasni vsetko
-    // Po 30s v pozadi sa zlozi Tor VPN (tunel dole, VPN kluc zmizne) A zabije sa aj samotny
+    private static final long GRACE_MS = 15_000;      // 15s v pozadi -> zhasni vsetko
+    // Po 15s v pozadi sa zlozi Tor VPN (tunel dole, VPN kluc zmizne) A zabije sa aj samotny
     // Messenger. Tym padom nemoze bezat na pozadi ani nic leaknut. Pri dalsom otvoreni sa
     // proces nastartuje odznova a TorBootProvider postavi tunel skor, nez ide siet.
 
@@ -28,6 +28,9 @@ public class LifecycleWatcher implements Application.ActivityLifecycleCallbacks 
     private final Handler main = new Handler(Looper.getMainLooper());
     private int started = 0;
     private boolean torWanted = false;
+
+    /** Videl tento proces uz nejaku Activity? TorBootProvider podla toho pozna wake z pozadia. */
+    public static volatile boolean everForeground = false;
 
     /** 1. stupen: Tor prec (baterka), tunel ostava blackhole - appka sa von priamo nedostane. */
     private final Runnable stopTask = new Runnable() {
@@ -58,9 +61,11 @@ public class LifecycleWatcher implements Application.ActivityLifecycleCallbacks 
     @Override
     public void onActivityStarted(Activity a) {
         started++;
+        everForeground = true;
         main.removeCallbacks(stopTask);
         if (!torWanted) {
             torWanted = true;
+            TorGate.reset();   // Tor nabieha odznova -> ukaz pouzivatelovi priebeh
             startTor();
         }
     }
@@ -69,6 +74,7 @@ public class LifecycleWatcher implements Application.ActivityLifecycleCallbacks 
     public void onActivityStopped(Activity a) {
         started = Math.max(0, started - 1);
         if (started == 0) {
+            TorGate.detach();      // brana aj jej polling odchadzaju s poslednou Activity
             // Messenger islo do pozadia -> vypni Tor, tunel necha blackhole.
             main.postDelayed(stopTask, GRACE_MS);
         }
@@ -87,7 +93,7 @@ public class LifecycleWatcher implements Application.ActivityLifecycleCallbacks 
     }
 
     @Override public void onActivityCreated(Activity a, Bundle b) {}
-    @Override public void onActivityResumed(Activity a) {}
+    @Override public void onActivityResumed(Activity a) { TorGate.attach(a); }
     @Override public void onActivityPaused(Activity a) {}
     @Override public void onActivitySaveInstanceState(Activity a, Bundle b) {}
     @Override public void onActivityDestroyed(Activity a) {}
