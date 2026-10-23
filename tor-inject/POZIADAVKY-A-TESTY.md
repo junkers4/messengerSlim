@@ -19,6 +19,7 @@ Build: `work/slim_wp-signed.apk` (slim + branding) → `tor-inject/build.sh` →
 | R10 | Dáta panelu sa ťahajú **cez Tor** a musia dobehnúť aj keď tunel ešte nestál. | `TRIES`/`RETRY_DELAY_MS` v `WeatherPanel` |
 | R11 | Po `READY` sa cez Tor hneď otvorí spojenie na `edge-mqtt.facebook.com:443`, aby bol okruh pripravený; keď exit zlyhá, vyžiada sa nový okruh (`NEWNYM`), max 3 pokusy. | `OrcaTorVpnService.startWarmUp`, `TorController.probe` |
 | R12 | Ťuknutie na fotku vo vlákne ju otvorí na celú obrazovku (zoom, uloženie). | `MEDIA_WHITELIST` v `nuclear_chatonly.py`, `activityWhitelist` + `$mediaKeepRegex` v `apply-nuclear-chatonly.ps1` |
+| R13 | **QUIC (UDP) je vypnutý** — Tor UDP neprenesie, takže fotky/videá/DGW išli až po timeoute. Teraz idú hneď cez TCP. | `scripts/py/no_quic.py` (`QuicSettings$Builder.build`, `MNSDGWNetworkStackConfig.<init>`) |
 
 ### Prečo je detekcia Stories pásu prísna
 
@@ -93,5 +94,12 @@ bash build.sh
 adb install -r orca-tor-signed.apk
 ```
 
-Slim základ (`work/slim_wp-signed.apk`) sa prestavuje len keď sa menia cuts alebo branding —
+Slim základ (`work/slim_wp-signed.apk`) sa na čistom dekódovanom strome (apktool, smali) pripraví takto:
+
+```bash
+python3 scripts/py/nuclear_chatonly.py work/decoded_fresh   # cuts (prehliadač fotiek už ostáva)
+python3 scripts/py/no_quic.py work/decoded_fresh            # QUIC off -> všetko cez TCP/Tor
+```
+
+Prestavuje sa len keď sa menia cuts alebo branding —
 zdroj je strom `work/decoded_fresh` (obsahuje aj hook `X/2ml.A04 → WeatherPanel.install`).

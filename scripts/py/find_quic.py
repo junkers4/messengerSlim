@@ -11,8 +11,8 @@ import re
 from collections import defaultdict
 from pathlib import Path
 
-PATH_RX = re.compile(r"(quic|mvfst|http3|liger)", re.IGNORECASE)
-STR_RX = re.compile(r'const-string(?:/jumbo)?\s+\w+,\s+"([^"]*(?:quic|mvfst|http3|h3_|_h3)[^"]*)"',
+PATH_RX = re.compile(r"(quic(?!k)|mvfst|http3|liger)", re.IGNORECASE)
+STR_RX = re.compile(r'const-string(?:/jumbo)?\s+\w+,\s+"([^"]*(?:quic(?!k)|mvfst|http3|h3_|_h3)[^"]*)"',
                     re.IGNORECASE)
 
 
