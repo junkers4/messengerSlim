@@ -285,7 +285,9 @@ public class OrcaTorVpnService extends VpnService {
             "socks5:\n  port: " + SOCKS + "\n  address: 127.0.0.1\n  udp: 'udp'\n" +
             "mapdns:\n  address: " + MAPDNS + "\n  port: 53\n  network: 100.64.0.0\n" +
             "  netmask: 255.192.0.0\n  cache-size: 10000\n" +
-            "misc:\n  log-file: stderr\n  log-level: warn\n";
+            // connect cez Tor (okruh + exit) bezne trva 3-15 s; hev default 10 s spojenie
+            // zrusil skor, nez Tor stihol skusit dalsi exit -> odoslanie sa zaseklo
+            "misc:\n  connect-timeout: 30000\n  log-file: stderr\n  log-level: warn\n";
         try (OutputStream os = new FileOutputStream(f)) { os.write(y.getBytes(StandardCharsets.UTF_8)); }
         return f;
     }

@@ -90,6 +90,15 @@ public class TorController {
                 // bootstrap len cez hardcoded dir authorities -> mnozina IP, ktore
                 // treba vynat z tunela, je mala a znama (pozri DIRAUTH_IPS)
                 "UseDefaultFallbackDirs 0\n" +
+                // MQTT spojenie Messengera (edge-mqtt, port 443) zije dlho - stabilne relay
+                // uzly nespadnu uprostred, takze spravy sa nezaseknu na mrtvom okruhu
+                "LongLivedPorts 21,22,443,706,1863,5050,5190,5222,5223,6523,6667,6697,8300\n" +
+                // novy okruh = nova exit IP; Facebook kazdu zmenu IP preveruje a pri blokovanom
+                // exite spojenie zlyha. Drz jeden exit dlhsie (default 10 min).
+                "MaxCircuitDirtiness 1800\n" +
+                // mobilny NAT zahadzuje necinne TCP po par minutach; caste keepalive udrzi
+                // spojenie na guard nazive (default 5 min = medzitym zaseknuty Tor)
+                "KeepalivePeriod 60\n" +
                 "Log notice stdout\n";
         try (OutputStream os = new FileOutputStream(torrc)) {
             os.write(cfg.getBytes(StandardCharsets.UTF_8));
