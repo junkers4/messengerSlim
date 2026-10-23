@@ -420,6 +420,7 @@ $activityWhitelist = @(
   'PhotoView',
   'messaging[\\/]video',
   'videoplayer',
+  'sharedcontent[\\/]',
   'messaging[\\/]attachments',
   'messaging[\\/]photos[\\/]',
   'messaging[\\/]contactpicker',

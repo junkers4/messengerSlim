@@ -151,7 +151,8 @@ MSG_WHITELIST = re.compile(
 # nahlad v chate a nedala sa otvorit.
 MEDIA_WHITELIST = re.compile(
     r"(messaging/media/)|(mediaviewer)|(photoview)|(messaging/photos/)"
-    r"|(messaging/video)|(videoplayer)",
+    r"|(messaging/video)|(videoplayer)"
+    r"|(sharedcontent/)",                  # galeria "Fotky a videa" z detailu chatu
     re.IGNORECASE,
 )
 
