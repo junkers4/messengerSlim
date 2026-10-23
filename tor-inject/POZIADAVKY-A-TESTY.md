@@ -9,7 +9,7 @@ Build: `work/slim_wp-signed.apk` (slim + branding) → `tor-inject/build.sh` →
 |---|---|---|
 | R1 | Kým Tor nabieha, appka je **celá zakrytá** bránou (anglicky, cibuľa, percentá) a **neprepustí žiadny dotyk** — počas bootstrapu nesmie ísť von nič. | `TorGate.java`, stav cez `TorStatus` (súbor vo `filesDir`, lebo VpnService beží v procese `:tor`) |
 | R2 | Po `READY` brána zmizne (krátke „Connected") a **polling sa zastaví** — v bežnom behu nesmie nič cyklicky bežať. | `TorGate.startPolling` / `detach` |
-| R3 | 15 s po odchode na pozadie sa zloží Tor aj tunel (VPN kľúč zmizne) a **zabije sa Messenger aj `:tor` proces**. | `LifecycleWatcher.GRACE_MS`, `OrcaTorVpnService.quit()` |
+| R3 | 3 min po odchode na pozadie sa zloží Tor aj tunel (VPN kľúč zmizne) a **zabije sa Messenger aj `:tor` proces**. | `LifecycleWatcher.GRACE_MS`, `OrcaTorVpnService.quit()` |
 | R4 | Appka sa **nesmie prebudiť na pozadí** (žiadny push, boot, sync adaptér). Ak ju systém aj tak naštartuje, proces sa sám ukončí. | `scripts/py/no_background_manifest.py` (+ `android.content.SyncAdapter`, `android.accounts.AccountAuthenticator`), `TorBootProvider.disableWakeComponents` + `killIfBackgroundWake` |
 | R5 | **Emoji, nálepky, GIF a fotky sa musia vykresliť a dať poslať.** | `WeatherPanel` — prísna detekcia Stories pásu (viď nižšie) |
 | R6 | Vlákno musí zobraziť históriu aj vlastné odoslané správy. | `nuclear_chatonly.py` → `MSG_WHITELIST` (mqtt/msys/mailbox/…) |
@@ -45,7 +45,7 @@ Príprava: `export PATH=$PATH:$HOME/Android/Sdk/platform-tools`, telefón cez US
 | T8 | Vloženie emoji | ťuknúť na emoji | Emoji je v poli „Message", objaví sa šípka Odoslať |
 | T9 | Fotky | ikonka galérie | Mriežka náhľadov z telefónu; výber označí fotku číslom a ukáže Edit/Send |
 | T10 | Tunel | `adb shell ip addr show tun0` | `tun0 ... mtu 8500`, adresa 198.18.0.1 |
-| T11 | Odpojenie po 15 s | HOME, počkať 25 s, `ip addr show tun0`, `ps -A \| grep orca` | Žiadny `tun0`, žiadny proces `orca` ani `orca:tor`, kľúč zo stavovej lišty zmizne |
+| T11 | Odpojenie po 3 min | HOME, počkať 3 min 10 s, `ip addr show tun0`, `ps -A \| grep orca` | Žiadny `tun0`, žiadny proces `orca` ani `orca:tor`, kľúč zo stavovej lišty zmizne |
 | T12 | Žiadne budenie | po T11 počkať 60 s, `adb logcat -d \| grep "Start proc.*orca"` | Žiadny štart. (Ak ho systém predsa naštartuje, v `OrcaTor` logu je „Start z pozadia … ukoncujem proces") |
 | T13 | Plynulosť | `adb shell dumpsys gfxinfo com.facebook.orca reset`, 6× swipe, `dumpsys gfxinfo` | Janky frames < 2 %, 90. percentil ≤ ~12 ms |
 

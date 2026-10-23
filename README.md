@@ -73,7 +73,7 @@ So not a single packet escapes Tor at startup:
 ## Battery — Tor runs only when needed
 
 `LifecycleWatcher` turns Tor on only while Messenger is in the **foreground** and off
-about 25 s after it goes to the **background** (the delay avoids a needless Tor restart
+about 3 minutes after it goes to the **background** (the delay avoids a needless Tor restart
 when you briefly switch apps). Open Messenger, Tor starts; close it, Tor stops and the VPN
 key disappears from the status bar.
 
