@@ -248,6 +248,56 @@ public class TorController {
         return res;
     }
 
+    /**
+     * SOCKS5 CONNECT cez Tor na host:port (meno prelozi exit). true = exit spojenie nadviazal.
+     * Spojenie sa hned zavrie - ide len o to, aby Tor mal hotovy a overeny okruh.
+     */
+    public boolean probe(String host, int port, int timeoutMs) {
+        try (Socket s = new Socket()) {
+            s.connect(new InetSocketAddress("127.0.0.1", socksPort), 3000);
+            s.setSoTimeout(timeoutMs);
+            OutputStream o = s.getOutputStream();
+            InputStream in = s.getInputStream();
+            o.write(new byte[]{5, 1, 0}); o.flush();          // SOCKS5, bez autentifikacie
+            byte[] hello = new byte[2];
+            if (!readFully(in, hello) || hello[0] != 5 || hello[1] != 0) return false;
+            byte[] h = host.getBytes(StandardCharsets.ISO_8859_1);
+            byte[] req = new byte[7 + h.length];
+            req[0] = 5; req[1] = 1; req[2] = 0; req[3] = 3; req[4] = (byte) h.length;
+            System.arraycopy(h, 0, req, 5, h.length);
+            req[5 + h.length] = (byte) (port >> 8);
+            req[6 + h.length] = (byte) port;
+            o.write(req); o.flush();
+            byte[] rep = new byte[4];
+            return readFully(in, rep) && rep[0] == 5 && rep[1] == 0;
+        } catch (Throwable t) {
+            return false;
+        }
+    }
+
+    /** SIGNAL NEWNYM: nove spojenia pojdu cez nove okruhy (Tor to dovoli max raz za 10 s). */
+    public void newCircuits() {
+        try (Socket s = new Socket()) {
+            s.connect(new InetSocketAddress("127.0.0.1", ctrlPort), 3000);
+            s.setSoTimeout(5000);
+            OutputStream o = s.getOutputStream();
+            BufferedReader in = new BufferedReader(new InputStreamReader(
+                    s.getInputStream(), StandardCharsets.ISO_8859_1));
+            send(o, "AUTHENTICATE " + hex(readFile(new File(dataDir(), "control_auth_cookie"))) + "\r\n");
+            String r = in.readLine();
+            if (r == null || !r.startsWith("250")) { Log.w(TAG, "ctrl auth: " + r); return; }
+            send(o, "SIGNAL NEWNYM\r\n");
+            Log.i(TAG, "NEWNYM: " + in.readLine());
+            send(o, "QUIT\r\n");
+        } catch (Throwable t) { Log.w(TAG, "newCircuits", t); }
+    }
+
+    private static boolean readFully(InputStream in, byte[] b) throws Exception {
+        int n = 0;
+        while (n < b.length) { int k = in.read(b, n, b.length - n); if (k < 0) return false; n += k; }
+        return true;
+    }
+
     /** Ulozi guardy pre buduci fail-closed start. */
     public void saveGuards(List<Long> guards) {
         try (OutputStream os = new FileOutputStream(guardCache())) {

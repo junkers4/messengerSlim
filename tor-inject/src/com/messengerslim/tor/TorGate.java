@@ -13,14 +13,18 @@ import android.view.Gravity;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.WindowInsets;
 import android.widget.FrameLayout;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
 /**
- * Celoobrazovkova brana, kym Tor nabieha. Prekryje appku uplne a zjeda vsetky doteky,
- * takze pouzivatel nemoze nic spustit skor, nez tunel stoji - ziadna prevadzka pocas
- * bootstrapu. (Siet je fail-closed aj na urovni tunela; toto je viditelna polovica.)
+ * Pasik hore, kym Tor nabieha. Appka je pod nim normalne pouzitelna - stare spravy sa daju
+ * citat hned a napisana sprava pocka vo fronte Messengera. Von aj tak nic neodide: tunel je
+ * fail-closed, kym Tor nie je READY (bez hev = blackhole).
+ *
+ * Vynimka: ked VpnService pri zaseknutom bootstrape docasne otvori siet (stav OPEN), pasik
+ * sa roztiahne na celu obrazovku a zjeda doteky, aby pouzivatel nic neposlal mimo Tor.
  *
  * Stav sa cita z TorStatus (subor v filesDir), lebo VpnService bezi v procese :tor.
  */
@@ -30,14 +34,20 @@ public final class TorGate {
     private static final long GIVE_UP_MS = 90_000;
 
     private static FrameLayout gate;
-    private static TextView title, percentView, hint;
+    private static LinearLayout bar;
+    private static TextView title, hint;
     private static View progressFill;
     private static View progressTrack;
     private static OnionView onion;
     private static Handler handler;
     private static Runnable poll;
     private static boolean done = false;
+    private static boolean blocking = false;
     private static long shownAt = 0;
+
+    private static final View.OnTouchListener EAT = new View.OnTouchListener() {
+        public boolean onTouch(View v, MotionEvent e) { return true; }   // nic neprejde do appky
+    };
 
     private TorGate() {}
 
@@ -54,70 +64,96 @@ public final class TorGate {
             detach();
 
             final float d = a.getResources().getDisplayMetrics().density;
-            FrameLayout box = new FrameLayout(a);
-            box.setBackgroundColor(0xFF0B0B10);
-            box.setClickable(true);
-            box.setFocusable(true);
-            box.setOnTouchListener(new View.OnTouchListener() {   // nic neprejde do appky
-                public boolean onTouch(View v, MotionEvent e) { return true; }
-            });
 
-            LinearLayout col = new LinearLayout(a);
-            col.setOrientation(LinearLayout.VERTICAL);
-            col.setGravity(Gravity.CENTER_HORIZONTAL);
+            // cela plocha; v rezime pasika je priehladna a doteky prepusta do appky
+            FrameLayout box = new FrameLayout(a);
+
+            LinearLayout b = new LinearLayout(a);
+            b.setOrientation(LinearLayout.VERTICAL);
+            b.setBackgroundColor(0xF20B0B10);
+
+            LinearLayout row = new LinearLayout(a);
+            row.setOrientation(LinearLayout.HORIZONTAL);
+            row.setGravity(Gravity.CENTER_VERTICAL);
+            row.setPadding((int) (14 * d), (int) (7 * d), (int) (14 * d), (int) (7 * d));
 
             onion = new OnionView(a);
-            int size = (int) (108 * d);
-            LinearLayout.LayoutParams olp = new LinearLayout.LayoutParams(size, size);
-            olp.bottomMargin = (int) (26 * d);
-            col.addView(onion, olp);
+            LinearLayout.LayoutParams olp =
+                    new LinearLayout.LayoutParams((int) (20 * d), (int) (20 * d));
+            olp.rightMargin = (int) (10 * d);
+            row.addView(onion, olp);
 
             title = new TextView(a);
-            title.setText("Connecting to Tor");
+            title.setText("Connecting to Tor…");
             title.setTextColor(Color.WHITE);
-            title.setTextSize(TypedValue.COMPLEX_UNIT_SP, 21);
-            title.setGravity(Gravity.CENTER);
-            col.addView(title);
-
-            percentView = new TextView(a);
-            percentView.setText("");
-            percentView.setTextColor(0xFFB388FF);
-            percentView.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14);
-            percentView.setGravity(Gravity.CENTER);
-            percentView.setPadding(0, (int) (10 * d), 0, (int) (14 * d));
-            col.addView(percentView);
+            title.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14);
+            row.addView(title);
+            b.addView(row);
 
             FrameLayout track = new FrameLayout(a);
             track.setBackgroundColor(0xFF241C33);
             View f = new View(a);
             f.setBackgroundColor(0xFF9A63FF);
-            track.addView(f, new FrameLayout.LayoutParams(0, (int) (3 * d)));
-            LinearLayout.LayoutParams tlp =
-                    new LinearLayout.LayoutParams((int) (220 * d), (int) (3 * d));
-            col.addView(track, tlp);
+            track.addView(f, new FrameLayout.LayoutParams(0, (int) (2 * d)));
+            b.addView(track, new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT, (int) (2 * d)));
             progressTrack = track;
             progressFill = f;
 
             hint = new TextView(a);
-            hint.setText("No traffic leaves this device until the tunnel is up.");
-            hint.setTextColor(0xFF7C8088);
-            hint.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
+            hint.setTextColor(0xFF9AA0A8);
+            hint.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
             hint.setGravity(Gravity.CENTER);
-            hint.setPadding((int) (36 * d), (int) (22 * d), (int) (36 * d), 0);
-            col.addView(hint);
+            hint.setPadding((int) (36 * d), (int) (28 * d), (int) (36 * d), 0);
+            hint.setVisibility(View.GONE);
+            b.addView(hint);
 
-            box.addView(col, new FrameLayout.LayoutParams(
+            FrameLayout.LayoutParams blp = new FrameLayout.LayoutParams(
                     FrameLayout.LayoutParams.MATCH_PARENT,
-                    FrameLayout.LayoutParams.WRAP_CONTENT, Gravity.CENTER));
+                    FrameLayout.LayoutParams.WRAP_CONTENT, Gravity.TOP);
+            blp.topMargin = statusBarHeight(a, root);
+            box.addView(b, blp);
 
             root.addView(box, new FrameLayout.LayoutParams(
                     FrameLayout.LayoutParams.MATCH_PARENT,
                     FrameLayout.LayoutParams.MATCH_PARENT));
             box.bringToFront();
             gate = box;
+            bar = b;
+            blocking = false;
             shownAt = System.currentTimeMillis();
             startPolling(a);
         } catch (Throwable ignore) {}
+    }
+
+    private static int statusBarHeight(Activity a, View root) {
+        try {
+            WindowInsets in = root.getRootWindowInsets();
+            if (in != null && in.getSystemWindowInsetTop() > 0) return in.getSystemWindowInsetTop();
+        } catch (Throwable ignore) {}
+        try {
+            int id = a.getResources().getIdentifier("status_bar_height", "dimen", "android");
+            if (id > 0) return a.getResources().getDimensionPixelSize(id);
+        } catch (Throwable ignore) {}
+        return 0;
+    }
+
+    /** OPEN = siet je docasne otvorena mimo Tor -> zakry appku a zjedz doteky. */
+    private static void setBlocking(boolean on) {
+        if (gate == null || bar == null || on == blocking) return;
+        blocking = on;
+        if (on) {
+            gate.setBackgroundColor(0xF20B0B10);
+            gate.setClickable(true);
+            gate.setOnTouchListener(EAT);
+            hint.setText("Tor is finishing its connection.\nThe app is paused so nothing leaves outside Tor.");
+            hint.setVisibility(View.VISIBLE);
+        } else {
+            gate.setBackgroundColor(Color.TRANSPARENT);
+            gate.setClickable(false);
+            gate.setOnTouchListener(null);
+            hint.setVisibility(View.GONE);
+        }
     }
 
     private static void startPolling(final Activity a) {
@@ -130,18 +166,20 @@ public final class TorGate {
                     String s = TorStatus.read(a);
                     if (TorStatus.READY.equals(s)) {
                         done = true;
-                        if (title != null) title.setText("Connected");
-                        if (percentView != null) percentView.setText("100 %");
-                        if (hint != null) hint.setText("All traffic now goes through Tor.");
+                        setBlocking(false);
+                        if (title != null) title.setText("Connected through Tor");
                         setProgress(1f);
                         if (onion != null) onion.setLit(true);
                         handler.postDelayed(new Runnable() {
                             public void run() { fadeOut(); }
-                        }, 700);
+                        }, 900);
                         return;
                     }
+                    setBlocking(TorStatus.OPEN.equals(s));
                     int pct = TorStatus.percent(s);
-                    if (percentView != null) percentView.setText(pct >= 0 ? pct + " %" : "starting…");
+                    if (title != null) {
+                        title.setText(pct >= 0 ? "Connecting to Tor… " + pct + " %" : "Connecting to Tor…");
+                    }
                     if (pct >= 0) setProgress(pct / 100f);
 
                     if (System.currentTimeMillis() - shownAt > GIVE_UP_MS) { stalled(a); return; }
@@ -157,20 +195,19 @@ public final class TorGate {
     /** Bootstrap dlho nikam nevedie - povedz to a ponukni novy pokus. */
     private static void stalled(final Activity a) {
         try {
-            if (title != null) title.setText("Tor is taking longer than usual");
-            if (percentView != null) percentView.setText("");
-            if (hint != null) {
-                hint.setText("Still no traffic is leaving this device.\n\nTap to try again.");
-            }
-            if (gate != null) {
-                gate.setOnClickListener(new View.OnClickListener() {
+            setBlocking(false);
+            if (title != null) title.setText("Tor is slow – tap here to retry");
+            if (bar != null) {
+                bar.setOnClickListener(new View.OnClickListener() {
                     public void onClick(View v) {
                         try {
                             a.startService(new Intent(a, OrcaTorVpnService.class)
                                     .setAction(OrcaTorVpnService.ACTION_START));
                         } catch (Throwable ignore) {}
+                        v.setOnClickListener(null);
+                        v.setClickable(false);
                         shownAt = System.currentTimeMillis();
-                        if (title != null) title.setText("Connecting to Tor");
+                        if (title != null) title.setText("Connecting to Tor…");
                         startPolling(a);
                     }
                 });
@@ -198,7 +235,7 @@ public final class TorGate {
         } catch (Throwable t) { detach(); }
     }
 
-    /** Zlozi branu a zastavi polling. */
+    /** Zlozi pasik a zastavi polling. */
     public static void detach() {
         try {
             if (handler != null && poll != null) handler.removeCallbacks(poll);
@@ -207,11 +244,12 @@ public final class TorGate {
                 ((ViewGroup) gate.getParent()).removeView(gate);
             }
         } catch (Throwable ignore) {}
-        gate = null; title = null; percentView = null; hint = null;
+        gate = null; bar = null; title = null; hint = null;
         progressFill = null; progressTrack = null; onion = null;
+        blocking = false;
     }
 
-    /** Appka sa otvara nanovo (Tor nabieha odznova) -> brana sa zase ukaze. */
+    /** Appka sa otvara nanovo (Tor nabieha odznova) -> pasik sa zase ukaze. */
     public static void reset() { done = false; }
 
     /** Torova cibula - kreslena, ziadny obrazok v resources. */

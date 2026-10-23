@@ -7,7 +7,7 @@ Build: `work/slim_wp-signed.apk` (slim + branding) → `tor-inject/build.sh` →
 
 | # | Požiadavka | Kde je riešená |
 |---|---|---|
-| R1 | Kým Tor nabieha, appka je **celá zakrytá** bránou (anglicky, cibuľa, percentá) a **neprepustí žiadny dotyk** — počas bootstrapu nesmie ísť von nič. | `TorGate.java`, stav cez `TorStatus` (súbor vo `filesDir`, lebo VpnService beží v procese `:tor`) |
+| R1 | Kým Tor nabieha, hore je **pásik** (anglicky, cibuľa, percentá) a appka pod ním je **použiteľná** — staré správy sa dajú čítať hneď, napísaná správa počká vo fronte. Von nejde nič, lebo tunel je fail-closed. Keď sieť počas zaseknutého bootstrapu dočasne ide mimo tunela (stav `OPEN`), pásik zakryje celú appku a zje doteky. | `TorGate.java`, stav cez `TorStatus` (súbor vo `filesDir`, lebo VpnService beží v procese `:tor`) |
 | R2 | Po `READY` brána zmizne (krátke „Connected") a **polling sa zastaví** — v bežnom behu nesmie nič cyklicky bežať. | `TorGate.startPolling` / `detach` |
 | R3 | 3 min po odchode na pozadie sa zloží Tor aj tunel (VPN kľúč zmizne) a **zabije sa Messenger aj `:tor` proces**. | `LifecycleWatcher.GRACE_MS`, `OrcaTorVpnService.quit()` |
 | R4 | Appka sa **nesmie prebudiť na pozadí** (žiadny push, boot, sync adaptér). Ak ju systém aj tak naštartuje, proces sa sám ukončí. | `scripts/py/no_background_manifest.py` (+ `android.content.SyncAdapter`, `android.accounts.AccountAuthenticator`), `TorBootProvider.disableWakeComponents` + `killIfBackgroundWake` |
@@ -17,6 +17,8 @@ Build: `work/slim_wp-signed.apk` (slim + branding) → `tor-inject/build.sh` →
 | R8 | Chod musí byť plynulý — žiadne periodické prechádzanie view hierarchie. | zrušený 400 ms polling tab baru; panel sa rozhoduje len pri stavbe tray-u |
 | R9 | Panel na mieste Stories pásu: počasie, detail dňa, dátum + meniny (SK) + svátek (CZ) + fáza mesiaca, bežiaci pás správ + „v tento deň". | `WeatherPanel.build()` |
 | R10 | Dáta panelu sa ťahajú **cez Tor** a musia dobehnúť aj keď tunel ešte nestál. | `TRIES`/`RETRY_DELAY_MS` v `WeatherPanel` |
+| R11 | Po `READY` sa cez Tor hneď otvorí spojenie na `edge-mqtt.facebook.com:443`, aby bol okruh pripravený; keď exit zlyhá, vyžiada sa nový okruh (`NEWNYM`), max 3 pokusy. | `OrcaTorVpnService.startWarmUp`, `TorController.probe` |
+| R12 | Ťuknutie na fotku vo vlákne ju otvorí na celú obrazovku (zoom, uloženie). | `MEDIA_WHITELIST` v `nuclear_chatonly.py`, `activityWhitelist` + `$mediaKeepRegex` v `apply-nuclear-chatonly.ps1` |
 
 ### Prečo je detekcia Stories pásu prísna
 
@@ -35,8 +37,8 @@ Príprava: `export PATH=$PATH:$HOME/Android/Sdk/platform-tools`, telefón cez US
 
 | # | Test | Postup | Očakávanie |
 |---|---|---|---|
-| T1 | Tor brána | `adb shell am force-stop com.facebook.orca`, spustiť appku, screenshot po 2 s | Čierna obrazovka, fialová cibuľa, „Connecting to Tor", percentá, text o tom, že nič neuniká |
-| T2 | Brána blokuje doteky | počas brány `adb shell input tap 445 900` (miesto chatu), po nábehu screenshot | Zostane inbox, chat sa neotvoril |
+| T1 | Tor pásik | `adb shell am force-stop com.facebook.orca`, spustiť appku, screenshot po 2 s | Hore čierny pásik s cibuľou, „Connecting to Tor… NN %“, pod ním inbox |
+| T2 | Appka použiteľná počas nábehu | počas pásika ťuknúť na chat | Chat sa otvorí, história sa zobrazí; `adb shell dumpsys connectivity` ani `logcat` neukazujú prevádzku mimo `tun0` |
 | T3 | Brána zmizne | screenshot ~15 s po štarte; `adb logcat -d -s OrcaTor:*` | „Messenger je teraz smerovany cez Tor.", brána preč |
 | T4 | Panel | screenshot inboxu | 4 riadky: mesto+teplota / pocit+max-min+dážď+vietor+východ-západ / dátum+meniny+CZ+mesiac / bežiaci pás správ |
 | T5 | Pôvodná navigácia | screenshot inboxu | Chats · Stories · Notifications · Menu (modrý, natívny) |
@@ -48,6 +50,8 @@ Príprava: `export PATH=$PATH:$HOME/Android/Sdk/platform-tools`, telefón cez US
 | T11 | Odpojenie po 3 min | HOME, počkať 3 min 10 s, `ip addr show tun0`, `ps -A \| grep orca` | Žiadny `tun0`, žiadny proces `orca` ani `orca:tor`, kľúč zo stavovej lišty zmizne |
 | T12 | Žiadne budenie | po T11 počkať 60 s, `adb logcat -d \| grep "Start proc.*orca"` | Žiadny štart. (Ak ho systém predsa naštartuje, v `OrcaTor` logu je „Start z pozadia … ukoncujem proces") |
 | T13 | Plynulosť | `adb shell dumpsys gfxinfo com.facebook.orca reset`, 6× swipe, `dumpsys gfxinfo` | Janky frames < 2 %, 90. percentil ≤ ~12 ms |
+| T14 | Zahriatie okruhu | po nábehu `adb logcat -d -s OrcaTor:*` | „Okruh k Facebooku pripraveny za … ms“ (alebo „novy okruh“ a potom úspech) |
+| T15 | Fotka na celú obrazovku | vo vlákne ťuknúť na fotku | Otvorí sa prehliadač, dá sa zväčšiť |
 
 ## Výsledky posledného behu (2026-09-03, 19:26–19:40)
 

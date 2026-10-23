@@ -146,6 +146,22 @@ MSG_WHITELIST = re.compile(
     re.IGNORECASE,
 )
 
+# Prehliadac fotiek/videi: tuknutie na fotku vo vlakne ju otvori na celu obrazovku (zoom,
+# ulozenie, preposlanie). Plosne sweepy (fazy 3-5) ho zabijali - fotka bola vidno len ako
+# nahlad v chate a nedala sa otvorit.
+MEDIA_WHITELIST = re.compile(
+    r"(messaging/media/)|(mediaviewer)|(photoview)|(messaging/photos/)"
+    r"|(messaging/video)|(videoplayer)",
+    re.IGNORECASE,
+)
+
+# Aktivity, ktore vyzeraju ako prehliadac - ak ich faza 4 predsa zabije, vypise sa varovanie.
+MEDIA_SUSPECT = re.compile(r"(media|photo|image|video|viewer|gallery|zoom)", re.IGNORECASE)
+
+
+def keep(rel: str) -> bool:
+    return bool(CALL_WHITELIST.search(rel) or MSG_WHITELIST.search(rel) or MEDIA_WHITELIST.search(rel))
+
 
 def finish_body(hook: str, sup: str) -> str:
     return (f".method public {hook}(Landroid/os/Bundle;)V\n"
@@ -273,7 +289,7 @@ def main() -> int:
     p3f = p3m = 0
     for f in files:
         rel = rel_of[f]
-        if not bg_rx.search(rel) or CALL_WHITELIST.search(rel) or MSG_WHITELIST.search(rel):
+        if not bg_rx.search(rel) or keep(rel):
             continue
         content = orig = f.read_text(errors="ignore")
         for rx, repl in NOOP_SPECS:
@@ -294,7 +310,7 @@ def main() -> int:
         if not re.search(r"\.super\s+L[^\n]*Activity;", head):
             continue
         rel = rel_of[f]
-        if act_wl.search(rel) or CALL_WHITELIST.search(rel) or MSG_WHITELIST.search(rel):
+        if act_wl.search(rel) or keep(rel):
             p4wl += 1
             continue
         content = f.read_text(errors="ignore")
@@ -303,6 +319,8 @@ def main() -> int:
             continue
         if kill_activity(f):
             p4 += 1
+            if MEDIA_SUSPECT.search(rel):
+                print(f"  ! faza 4 zatvara (moze byt prehliadac fotiek): {rel}")
         else:
             p4nomatch += 1
     print(f"Phase 4: patched={p4} whitelisted={p4wl} already={p4already} nomatch={p4nomatch}")
@@ -317,7 +335,7 @@ def main() -> int:
         if not is_svc and not is_rcv:
             continue
         rel = rel_of[f]
-        if svc_wl.search(rel) or CALL_WHITELIST.search(rel) or MSG_WHITELIST.search(rel):
+        if svc_wl.search(rel) or keep(rel):
             p5wl += 1
             continue
         content = orig = f.read_text(errors="ignore")

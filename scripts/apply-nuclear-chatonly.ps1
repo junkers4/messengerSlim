@@ -339,6 +339,8 @@ Write-Host "Phase 2 done: Patched=$p2patched, Missing=$p2missing, Skipped=$p2ski
 # ════════════════════════════════════════════════════════════════════════
 Write-Host "`n═══ PHASE 3: Broad Background Sweep ═══" -ForegroundColor Magenta
 
+# prehliadac fotiek/videi v chate (tuknutie na fotku -> zvacsenie) sa nesmie poskodit
+$mediaKeepRegex = '(?i)(messaging[\\/]media[\\/])|(mediaviewer)|(photoview)|(messaging[\\/]photos[\\/])|(messaging[\\/]video)|(videoplayer)'
 $bgPathRegex = '(background|notify|notification|push|mqtt|sync|upload|job|scheduler|alarm|directshare|wear|analytics|bugreport|keepalive|screencast|messengercar|fbnslite|oxygen|datatransport|systemalarm|systemjob|falco|nna|registration|chatheads|reels|montage|stories|sticker|marketplace|payments|camera|ar\\b|augmented|avatar|game|playground|memor|commerce|business|ads\\b|adunit|tracking|telemetry|logging|crashreport|errorreport|profiler|perf|debug|internalprefs|experiment|quickpromotion|survey|feedback|sso|accountkit|credential|appindex|deeplinking|shortcut|widget|bubble|pip\\b|floatingwindow|overlay|badge|jewel|aibot|metaai|aistudio|assistant)'
 
 $bgMethodSpecs = @(
@@ -357,7 +359,7 @@ $bgMethodSpecs = @(
 $p3files = 0
 $p3methods = 0
 Get-ChildItem -Path $base -Recurse -Filter '*.smali' | Where-Object {
-  $_.FullName -match $bgPathRegex -and $_.FullName -notmatch 'rtc[\\/]' -and $_.FullName -notmatch 'FbnsLiteRtc'
+  $_.FullName -match $bgPathRegex -and $_.FullName -notmatch 'rtc[\\/]' -and $_.FullName -notmatch 'FbnsLiteRtc' -and $_.FullName -notmatch $mediaKeepRegex
 } | ForEach-Object {
   $content = Get-Content -Raw -Path $_.FullName
   $changed = $false
@@ -411,7 +413,13 @@ $activityWhitelist = @(
   'messaging[\\/]conversationlist',
   'messaging[\\/]conversation[\\/]',
   'messaging[\\/]messagelist',
-  'messaging[\\/]media[\\/](picker|gallery)',
+  'messaging[\\/]media[\\/]',
+  'mediaviewer',
+  'MediaViewer',
+  'photoview',
+  'PhotoView',
+  'messaging[\\/]video',
+  'videoplayer',
   'messaging[\\/]attachments',
   'messaging[\\/]photos[\\/]',
   'messaging[\\/]contactpicker',
