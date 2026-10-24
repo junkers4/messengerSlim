@@ -15,7 +15,7 @@ import java.util.ArrayList;
 
 /**
  * Uprace inbox: skryje pas "Notifications are currently off" (notifikacie su vypnute zamerne,
- * R4) a plavajuce tlacidlo Meta AI; nadpis "messenger" prekresli na "spravaren". Bezi len par krat po vlozeni panelu - ziadny periodicky
+ * R4), plavajuce tlacidlo Meta AI a pole "Ask Meta AI or search"; nadpis "messenger" prekresli na "spravaren". Bezi len par krat po vlozeni panelu - ziadny periodicky
  * sken hierarchie (R8).
  */
 final class Declutter {
@@ -48,6 +48,12 @@ final class Declutter {
                 if ("Meta AI".contentEquals(String.valueOf(v.getContentDescription()))) {
                     v.setVisibility(View.GONE);
                 }
+            }
+            // vyhladavacie pole "Ask Meta AI or search" - user ho nechce
+            found.clear();
+            root.findViewsWithText(found, "Ask Meta AI", View.FIND_VIEWS_WITH_CONTENT_DESCRIPTION);
+            for (View v : found) {
+                if (String.valueOf(v.getContentDescription()).startsWith("Ask Meta AI")) v.setVisibility(View.GONE);
             }
             found.clear();
             root.findViewsWithText(found, "Messenger", View.FIND_VIEWS_WITH_CONTENT_DESCRIPTION);

@@ -45,6 +45,7 @@ Build: originálne APK → `tor-inject/build-all.sh` (lokálne aj GitHub Actions
 | X5 | **Upratený inbox**: bez pásu „Notifications are currently off“ (vypnuté zámerne) a bez plávajúceho tlačidla Meta AI. | `Declutter` |
 | X6 | Panel má miesto na **5 riadkov**: počasie+🧅, detail, dátum, info (narodeniny > sviatok > zajtra meniny), správy. | `WeatherPanel.build` |
 | X7 | Nadpis inboxu „messenger“ → **„spravaren“** (prekreslený rovnako veľko, farba podľa tmavého/svetlého režimu). | `Declutter.Wordmark` |
+| X8 | Pole „Ask Meta AI or search“ je skryté (user ho nechce); panel sa vkladá len do Stories pásu (výška ≥ 70 dp), nie do pásu filtrov All/Unread/Groups — predtým bol panel 2×. | `Declutter`, `WeatherPanel.geometry` |
 
 ### Rýchlosť písania a načítania
 

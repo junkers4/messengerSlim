@@ -83,7 +83,9 @@ public final class WeatherPanel {
         if (h <= 0) return null;
         DisplayMetrics dm = tray.getResources().getDisplayMetrics();
         float d = dm.density;
-        if (h < 48 * d || h > 260 * d) return Boolean.FALSE;
+        // Stories pas ~92 dp; pas filtrov "All / Unread / Groups" (~50 dp) je tiez vodorovny
+        // a hore - pri hranici 48 dp dostal druhy panel (2x Bucovice, zmiznute filtre)
+        if (h < 70 * d || h > 260 * d) return Boolean.FALSE;
         int[] loc = new int[2];
         tray.getLocationOnScreen(loc);
         if (loc[1] > dm.heightPixels / 2) return Boolean.FALSE;   // emoji/foto tray vyskakuju zospodu
