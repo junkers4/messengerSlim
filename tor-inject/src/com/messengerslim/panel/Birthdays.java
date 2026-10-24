@@ -284,6 +284,7 @@ final class Birthdays {
         final NumberPicker year = new NumberPicker(act);
         year.setMinValue(0); year.setMaxValue(years.length - 1);
         year.setDisplayedValues(years);
+        year.setWrapSelectorWheel(false);       // "—" hore, nie 1920 nad nim
         year.setValue(old != null && old.year > 0 ? thisYear - old.year + 1 : 0);
         for (NumberPicker np : new NumberPicker[] { day, month, year }) {
             np.setDescendantFocusability(NumberPicker.FOCUS_BLOCK_DESCENDANTS);
