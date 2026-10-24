@@ -93,7 +93,7 @@ final class Declutter {
     }
 
     private static View findSearchHost(View v, int w, int h, int depth) {
-        if (v == null || depth > 12 || w <= 0 || h <= 0) return null;
+        if (v == null || depth > 40 || w <= 0 || h <= 0) return null;   // polozka zoznamu je v hlbke ~16
         if (v instanceof ViewGroup && v.getVisibility() == View.VISIBLE && v.getWidth() >= w * 0.95f) {
             int[] loc = new int[2];
             v.getLocationOnScreen(loc);
