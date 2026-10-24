@@ -33,8 +33,9 @@ APKEDITOR_VER=1.4.9
 APKEDITOR_SHA=a9cd40df818845456be6d696de6110c89edf4b0a0580cb83438ed6b25a366e67
 TOR_VER=15.0.26
 TOR_SHA=a1a67ec77ce0a7c4fca446fd9f915fbb0302c3107c2d56ab213196187cfd894a
-HEV_TAG=2.9.3
-HEV_COMMIT=b9b9b7b9b0febe32bb5d8cdb9ffa414d94242b75
+# hev z main (2026-07-06): ma mapdns (DNS cez Tor) a JNI s void TProxyStartService, ako cakaju
+# nase triedy. 2.9.3 mapdns NEMA (DNS v tuneli nejde), 2.10+ ma JNI s boolean navratom.
+HEV_COMMIT=c6e4c72246fb0f20bda299f0efc7814bb3098d57
 
 # Facebook / Meta podpisove certifikaty Messengera (SHA-256)
 FB_CERTS="e3f9e1e0cf99d0e56a055ba65e241b3399f7cea524326b0cdd6ec1327ed0fdc1 911d604446084ca7f4760b775bfc160fa8702441240a7258645d7a72c4312d27"
@@ -62,12 +63,17 @@ fetch "https://archive.torproject.org/tor-package-archive/torbrowser/$TOR_VER/to
 mkdir -p "$WORK/tor" && tar xzf "$TORTGZ" -C "$WORK/tor"
 LIBTOR="$WORK/tor/tor/libTor.so"
 
-LIBHEV="$CACHE/libhev-$HEV_TAG/libs/arm64-v8a/libhev-socks5-tunnel.so"
+LIBHEV="$CACHE/libhev-$HEV_COMMIT/libs/arm64-v8a/libhev-socks5-tunnel.so"
 if [ ! -f "$LIBHEV" ]; then
-    H="$CACHE/libhev-$HEV_TAG"; rm -rf "$H"; mkdir -p "$H"
-    git clone -q --depth 1 --branch "$HEV_TAG" --recursive \
-        https://github.com/heiher/hev-socks5-tunnel "$H/jni"
+    H="$CACHE/libhev-$HEV_COMMIT"; rm -rf "$H"; mkdir -p "$H/jni"
+    git -C "$H/jni" init -q
+    git -C "$H/jni" fetch -q --depth 1 https://github.com/heiher/hev-socks5-tunnel "$HEV_COMMIT"
+    git -C "$H/jni" checkout -q FETCH_HEAD
+    git -C "$H/jni" submodule -q update --init --recursive --depth 1
     [ "$(git -C "$H/jni" rev-parse HEAD)" = "$HEV_COMMIT" ] || { echo "hev: necakany commit" >&2; exit 1; }
+    grep -q '"mapdns"' "$H/jni/src/hev-config.c" || { echo "hev: chyba mapdns -> DNS v tuneli by neslo" >&2; exit 1; }
+    grep -q '"TProxyStartService", "(Ljava/lang/String;I)V"' "$H/jni/src/hev-jni.c" \
+        || { echo "hev: JNI nesedi s hev/htproxy/TProxyService.java" >&2; exit 1; }
     (cd "$H" && "$ANDROID_NDK/ndk-build" NDK_PROJECT_PATH=. APP_BUILD_SCRIPT=jni/Android.mk \
         NDK_APPLICATION_MK=jni/Application.mk APP_ABI=arm64-v8a APP_PLATFORM=android-28 -j"$(nproc)")
 fi
