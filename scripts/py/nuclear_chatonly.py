@@ -290,6 +290,11 @@ def main() -> int:
     p3f = p3m = 0
     for f in files:
         rel = rel_of[f]
+        # obfuskovane X/<nahodne>.smali nenesu vyznam v ceste - regex (ar\b, nna, job, ...) by
+        # trafil napr. X/1Ar a vynuloval metody v nesuvisiacich triedach (DI kontajner, session,
+        # RTC launcher). Komponenty (Service/Receiver/Provider) pokryvaju fazy 4 a 5 podla super.
+        if rel.startswith("X/"):
+            continue
         if not bg_rx.search(rel) or keep(rel):
             continue
         content = orig = f.read_text(errors="ignore")
@@ -369,16 +374,9 @@ def main() -> int:
             p6 += 1
     print(f"Phase 6: providers={p6} whitelisted={p6wl}")
 
-    # ── PHASE 7: branding Messenger -> Spravaren ─────────────────────────
-    p7f = p7h = 0
-    for f in files:
-        content = f.read_text(errors="ignore")
-        if '"Messenger"' not in content:
-            continue
-        p7h += content.count('"Messenger"')
-        write(f, content.replace('"Messenger"', '"Spravaren"'))
-        p7f += 1
-    print(f"Phase 7: files={p7f} replacements={p7h}")
+    # ── PHASE 7: (zrusene) branding "Messenger" -> "Spravaren" vo VSETKYCH const-string ──
+    # Menilo aj interne identifikatory produktu (X/7Tk, X/1Ar, X/6Wi, DI kontajnery) a mohlo
+    # rozbit spravanie voci serveru. Nazov riesi branding.py (manifest) a Declutter (nadpis).
 
     print(f"\nSPOLU zmenenych suborov: {len(modified)}")
     if args.report:

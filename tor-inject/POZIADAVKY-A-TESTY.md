@@ -15,7 +15,7 @@ Build: originálne APK → `tor-inject/build-all.sh` (lokálne aj GitHub Actions
 | R6 | Vlákno musí zobraziť históriu aj vlastné odoslané správy. | `nuclear_chatonly.py` → `MSG_WHITELIST` (mqtt/msys/mailbox/…) |
 | R7 | Spodná navigácia je **pôvodná Messengerova**, len **bez záložky Stories** — žiadny vlastný bar. | `StoriesOff` |
 | R8 | Chod musí byť plynulý — žiadne periodické prechádzanie view hierarchie. Panel sa rozhoduje len pri stavbe tray-u, sieť ide mimo hlavného vlákna. | `SpravarenPanel.install` |
-| R9 | Názov appky **Spravaren**, ikonka = pôvodná Messenger bublina, len **čierna** namiesto modrej. Žiadne vlastné obrázky. | `scripts/py/branding.py` (volá ho `build-all.sh`) |
+| R9 | Názov appky **Spravaren**, ikonka = pôvodná Messenger bublina, len **čierna** namiesto modrej. Žiadne vlastné obrázky. Názov sa mení **len** v manifeste a na nadpise (nie v kóde: nahradenie každého reťazca „Messenger“ rozbíjalo interné identifikátory produktu). | `scripts/py/branding.py`, `Declutter.Wordmark` |
 | R10 | DNS v tuneli ide cez hev `mapdns` (falošné IP 100.64/10 → meno ide do Toru). Build spadne, ak hev mapdns nemá. | `build-all.sh` (`HEV_COMMIT`, kontrola `"mapdns"`) |
 | R11 | Po `READY` sa cez Tor hneď otvorí spojenie na `edge-mqtt.facebook.com:443`, aby bol okruh pripravený; keď exit zlyhá, vyžiada sa nový okruh (`NEWNYM`), max 3 pokusy. | `OrcaTorVpnService.startWarmUp`, `TorController.probe` |
 | R12 | Ťuknutie na fotku vo vlákne ju otvorí na celú obrazovku (zoom, uloženie). | `MEDIA_WHITELIST` v `nuclear_chatonly.py`, `activityWhitelist` + `$mediaKeepRegex` v `apply-nuclear-chatonly.ps1` |
