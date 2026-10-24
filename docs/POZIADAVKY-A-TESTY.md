@@ -103,7 +103,7 @@ Meralo sa na živom telefóne, správy len do chatu so sebou. „Čas“ z `adb`
 | T11 odpojenie po 3 min | ✅ po 3 min 15 s žiadny `tun0` ani proces `orca` |
 | T12 žiadne budenie | ✅ v okne po odpojení žiadny štart procesu |
 | T14 teplý okruh | ✅ 86–184 ms |
-| T15 fotka na celú obrazovku | ⚠️ používateľ potvrdil, že sa zväčší; automatický `adb` test ju neotvoril (nespoľahlivý) |
+| T15 fotka na celú obrazovku | ✅ otvorí sa za ~1–2 s (3× zmerané), používateľ potvrdil. Kým DGW padalo v slučke (49 chýb/min), v `adb` teste sa neotvorila; po oprave DGW áno. Testované len na fotke z chatu so sebou, nie na fotke stiahnutej od cudzieho kontaktu |
 | T16 panel | ✅ počasie, detail, dátum + meniny + svátek + mesiac, info riadok, správy, 🧅✓ |
 | T17 narodeniny | ✅ pridať / upraviť (kolieska) / zmazať, meniny podľa mena (Miška (Michaela) → CZ 19. 10.) |
 | T18 bez Stories | ✅ pás nahradený panelom |
