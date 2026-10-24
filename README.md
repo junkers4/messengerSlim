@@ -1,253 +1,265 @@
 # Spravaren (messengerSlim)
 
-Osekaný a súkromnejší **Messenger pre Android s vstavaným Torom**. Skript vezme
-**originálne APK od Facebooku** (tvoje vlastné, legálne získané), upraví ho, vloží do neho Tor a
-podpíše tvojím kľúčom. Výsledok je jedna appka s jednou ikonou: celá komunikácia Messengera
-ide cez Tor, Facebook vidí exit uzol, nie tvoju IP. Žiadny Orbot.
+A stripped-down, more private **Messenger for Android with a built-in Tor**. The build script
+takes the **original Facebook APK** (your own, legally obtained copy), patches it, injects Tor
+and signs it with your key. The result is one app with one icon: all Messenger traffic goes
+through Tor, Facebook sees an exit node, not your IP. No Orbot.
 
-> **Toto repo neobsahuje žiadne binárky Mety.** Nikdy sem necommituj APK, dekompilovaný kód,
-> kľúče ani súkromné exporty (`.gitignore` ich blokuje). Používaj len vlastnú kópiu APK na
-> vlastnom zariadení.
+> **This repo contains no Meta binaries.** Never commit an APK, decompiled code, keys or
+> private exports here (`.gitignore` blocks them). Use only your own copy of the APK on your
+> own device.
 
-Cieľové zariadenie: Pixel 9a, Android 16, arm64. Posledný overený Messenger: **584.1.0.61.98**.
+Target device: Pixel 9a, Android 16, arm64. Last verified Messenger: **584.1.0.61.98**.
 
-## Obsah
+## Contents
 
-1. [Čo to robí](#čo-to-robí)
-2. [Ako to funguje](#ako-to-funguje)
-3. [Štruktúra repa](#štruktúra-repa)
+1. [What it does](#what-it-does)
+2. [How it works](#how-it-works)
+3. [Repo layout](#repo-layout)
 4. [Build](#build)
-5. [Inštalácia a prvé spustenie](#inštalácia-a-prvé-spustenie)
-6. [Ovládanie panelu](#ovládanie-panelu)
-7. [Testovanie](#testovanie)
-8. [Nová verzia Messengera](#nová-verzia-messengera)
-9. [Známe obmedzenia](#známe-obmedzenia)
+5. [Install and first run](#install-and-first-run)
+6. [Panel controls](#panel-controls)
+7. [Testing](#testing)
+8. [New Messenger version](#new-messenger-version)
+9. [Known limitations](#known-limitations)
+10. [Safety and legal](#safety-and-legal)
 
-## Čo to robí
+## What it does
 
-**Súkromie a batéria**
+**Privacy and battery**
 
-- Všetko, čo Messenger pošle do siete, ide cez **Tor** (vstavaný `libTor.so`).
-- **Fail-closed**: kým Tor nebeží, appka nemá sieť; ak Tor spadne uprostred, appka sa odreže,
-  nikdy nepustí paket mimo Toru.
-- Tor beží **len keď je Messenger v popredí**. 3 minúty po odchode na pozadie sa zloží Tor aj
-  tunel a proces sa ukončí. Žiadne budenie na pozadí (preto **žiadne notifikácie** — zámer).
-- Chat-only: vypnuté Stories, Reels, Marketplace, Meta AI, reklamy, analytika a pozadové
-  služby. Hovory, emoji, GIFy a fotky ostávajú.
-- QUIC (UDP) je vypnutý v proxygen klientovi (fotky, videá, GIFy), lebo Tor UDP neprenesie; ide hneď cez TCP. V DGW bráne sa QUIC **nevypína** (vypnutie spôsobovalo ~49 chýb/min, pozri `patches/no_quic.py`).
+- Everything Messenger sends to the network goes through **Tor** (the bundled `libTor.so`).
+- **Fail-closed**: until Tor is running the app has no network; if Tor dies midway the app is
+  cut off, a packet never leaves outside Tor.
+- Tor runs **only while Messenger is in the foreground**. 3 minutes after it goes to the
+  background, Tor and the tunnel are torn down and the process exits. No background wake-ups
+  (hence **no notifications**, by design).
+- Chat-only: Stories, Reels, Marketplace, Meta AI, ads, analytics and background services are
+  disabled. Calls, emoji, GIFs and photos stay.
+- QUIC (UDP) is disabled in the proxygen client (photos, videos, GIFs) because Tor does not
+  carry UDP; it goes straight over TCP. QUIC is **not** disabled in the DGW gateway (doing so
+  caused ~49 errors/min, see `patches/no_quic.py`).
 
-**Vzhľad a panel v inboxe**
+**Look and the inbox panel**
 
-- Názov **Spravaren**, ikonka je pôvodná bublina, len čierna. Nadpis inboxu „spravaren“.
-- Na mieste Stories pásu je **panel**: počasie (mesto, teplota, pocit, max/min, dážď, vietor,
-  východ/západ, upozornenie na dážď do 3 h), dátum so **slovenskými meninami**, českým
-  svátkom, fázou mesiaca a štátnym sviatkom, **narodeniny** tvojich ľudí, bežiaci pás
-  slovenských správ a značka 🧅✓ (overené cez `check.torproject.org`, že to naozaj ide cez Tor).
-- Upratané: bez pásu „Notifications are currently off“ a bez plávajúceho tlačidla Meta AI.
+- Name **Spravaren**, the icon is the original bubble, just black. The inbox title reads
+  "spravaren".
+- A **panel** replaces the Stories strip: weather (city, temperature, feels-like, max/min, rain,
+  wind, sunrise/sunset, rain alert within 3 h), the date with **Slovak name days**, the Czech
+  name day, the moon phase and the Slovak public holiday, your people's **birthdays**, a
+  scrolling strip of Slovak news and a 🧅✓ mark (verified via `check.torproject.org` that
+  traffic really goes through Tor).
+- Decluttered: no "Notifications are currently off" banner and no floating Meta AI button.
 
-## Ako to funguje
+## How it works
 
-Build neprepisuje Messenger ručne. Berie originálne APK a aplikuje na ňom **opakovateľné
-patche**, takže sa dá zopakovať na novej verzii:
+The build does not hand-edit Messenger. It takes the original APK and applies **repeatable
+patches**, so the process can be repeated on a new version:
 
 ```
-originálne APK ──► overenie podpisu Facebooku ──► APKEditor decode (smali)
-   ──► patches/nuclear_chatonly.py   chat-only rezy
+original APK ──► Facebook signature check ──► APKEditor decode (smali)
+   ──► patches/nuclear_chatonly.py   chat-only cuts
    ──► patches/no_quic.py            QUIC off
-   ──► patches/branding.py           názov + čierna ikonka
-   ──► patches/panel_hook.py         hook panelu na Stories pás
-   ──► manifest: Tor komponenty + patches/no_background_manifest.py
+   ──► patches/branding.py           name + black icon
+   ──► patches/panel_hook.py         panel hook on the Stories strip
+   ──► manifest: Tor components + patches/no_background_manifest.py
    ──► tor-inject/src (Java) ──► javac + d8 ──► classesN.dex
    ──► libTor.so + libhev-socks5-tunnel.so (arm64)
-   ──► APKEditor build ──► zipalign ──► apksigner (tvoj kľúč)
+   ──► APKEditor build ──► zipalign ──► apksigner (your key)
 ```
 
-### Cesta dát
+### Data path
 
 ```
-Messenger ─► tun (VpnService, 0.0.0.0/0 okrem IP guardov) ─► hev-socks5-tunnel
+Messenger ─► tun (VpnService, 0.0.0.0/0 except guard IPs) ─► hev-socks5-tunnel
           ─► Tor SOCKS 127.0.0.1:9050 ─► guard ─► middle ─► exit ─► Facebook
 ```
 
-Všetko (tunel, SOCKS prevodník aj Tor) beží v **jednej appke** `com.facebook.orca`. DNS ide
-cez `mapdns` v hev (meno sa vyrieši cez Tor, nie cez operátora).
+Everything (tunnel, SOCKS converter and Tor) runs in **a single app**, `com.facebook.orca`.
+DNS goes through `mapdns` in hev (names are resolved over Tor, not by the carrier).
 
-**Protismyčka:** Tor beží pod rovnakým UID ako Messenger, takže by tunel zachytil aj vlastný
-Tor. Preto sa po štarte prečítajú IP adresy guardov cez ControlPort a z trás tunela sa
-vynechajú (`RouteUtil.allExcept`). Tor ide ku guardovi priamo, všetko ostatné cez tunel.
+**Loop prevention:** Tor runs under the same UID as Messenger, so the tunnel would capture
+Tor's own traffic. After startup the guard IPs are read over the ControlPort and left out of
+the tunnel routes (`RouteUtil.allExcept`). Tor reaches its guard directly, everything else goes
+through the tunnel.
 
-**Kill-switch:** tunel sa postaví hneď pri štarte s poslednými známymi guardmi, takže
-Messenger nemá sieť, kým Tor nenabehne. Ak sa bootstrap zasekne, sieť sa na chvíľu otvorí len
-natoľko, aby Tor dobehol (appku medzitým zakryje brána), a tunel sa hneď postaví späť.
-Watchdog pri páde Toru appku odreže.
+**Kill switch:** the tunnel is built immediately at startup with the last known guards, so
+Messenger has no network until Tor is up. If bootstrap stalls, the network opens briefly, just
+enough for Tor to finish (the gate covers the app meanwhile), and the tunnel is rebuilt right
+away. A watchdog cuts the app off if Tor crashes.
 
-**Panel bez zásahu do Messengera:** Java kód sa vkladá ako nový dex a jediný zásah do smali
-je jeden `invoke-static` v továrni na Stories pás. `panel_hook.py` tú továreň hľadá **podľa
-tvaru kódu**, nie podľa obfuskovaného mena, takže funguje aj po zmene verzie.
+**Panel without touching Messenger:** the Java code is added as a new dex, and the only smali
+change is one `invoke-static` in the Stories strip factory. `panel_hook.py` finds that factory
+**by code shape**, not by obfuscated name, so it keeps working across versions.
 
-### Vložené komponenty (`tor-inject/src`)
+### Injected components (`tor-inject/src`)
 
-| Trieda | Úloha |
+| Class | Role |
 |---|---|
-| `tor/OrcaTorVpnService` | VpnService: tunel bez guardov, kill-switch, watchdog, nový okruh |
-| `tor/TorController` | štart `libTor.so`, bootstrap, guardy cez ControlPort, `torrc` |
-| `tor/RouteUtil` | `0.0.0.0/0` bez IP guardov |
-| `tor/LifecycleWatcher` | Tor zapnutý v popredí, po 3 min na pozadí vypnutý |
-| `tor/TorBootProvider` | hook pri štarte procesu, žiadna druhá ikona |
-| `tor/TorGate`, `TorStatus` | pásik „Connecting to Tor…“ a stav medzi procesmi |
-| `tor/ConsentActivity` | jednorazový súhlas s VPN |
-| `panel/WeatherPanel` | panel: počasie, kalendár, správy, Tor značka |
-| `panel/Birthdays` | narodeniny (lokálne), meniny podľa mena |
-| `panel/Declutter` | upratanie inboxu, nadpis „spravaren“ |
-| `hev/htproxy/TProxyService` | JNI trieda pre `libhev-socks5-tunnel.so` |
+| `tor/OrcaTorVpnService` | VpnService: tunnel without guards, kill switch, watchdog, new circuit |
+| `tor/TorController` | starts `libTor.so`, bootstrap, guards via ControlPort, `torrc` |
+| `tor/RouteUtil` | `0.0.0.0/0` without the guard IPs |
+| `tor/LifecycleWatcher` | Tor on in the foreground, off after 3 min in the background |
+| `tor/TorBootProvider` | process-start hook, no second icon |
+| `tor/TorGate`, `TorStatus` | the "Connecting to Tor…" bar and state shared between processes |
+| `tor/ConsentActivity` | one-time VPN consent |
+| `panel/WeatherPanel` | panel: weather, calendar, news, Tor mark |
+| `panel/Birthdays` | birthdays (local), name days by name |
+| `panel/Declutter` | inbox cleanup, the "spravaren" title |
+| `hev/htproxy/TProxyService` | JNI class for `libhev-socks5-tunnel.so` |
 
-Natívne knižnice **nie sú v gite**; `build-all.sh` ich stiahne alebo skompiluje:
-`libTor.so` (Tor expert bundle 15.0.26) a `libhev-socks5-tunnel.so`
-([hev-socks5-tunnel](https://github.com/heiher/hev-socks5-tunnel), pevný commit, build zlyhá,
-ak v ňom chýba `mapdns` alebo nesedí JNI).
+The native libraries are **not in git**; `build-all.sh` downloads or compiles them:
+`libTor.so` (Tor expert bundle 15.0.26) and `libhev-socks5-tunnel.so`
+([hev-socks5-tunnel](https://github.com/heiher/hev-socks5-tunnel), pinned commit; the build
+fails if `mapdns` is missing or the JNI does not match).
 
-## Štruktúra repa
+## Repo layout
 
 ```
 README.md
 docs/
-  POZIADAVKY-A-TESTY.md   požiadavky (R*, P*, X*, S*), testovací protokol, výsledky
-patches/                  Python patche (smali a manifest) + dáta rezov
-  nuclear_chatonly.py     chat-only rezy; zoznamy sú v cuts.json
-  cuts.json               ciele, pravidlá a whitelisty rezov
-  no_quic.py              vypnutie QUIC
-  no_background_manifest.py   bez budenia na pozadí
-  branding.py             názov „Spravaren“ + čierna ikonka
-  panel_hook.py           hook panelu na Stories pás
+  REQUIREMENTS-AND-TESTS.md   requirements (R*, P*, X*, S*), test protocol, results
+patches/                      Python patches (smali and manifest) + cut data
+  nuclear_chatonly.py         chat-only cuts; the lists live in cuts.json
+  cuts.json                   targets, rules and whitelists of the cuts
+  no_quic.py                  QUIC off
+  no_background_manifest.py   no background wake-ups
+  branding.py                 the "Spravaren" name + black icon
+  panel_hook.py               panel hook on the Stories strip
 tor-inject/
-  build-all.sh            celý build jedným príkazom
-  manifest-inject.xml     Tor komponenty do manifestu
-  src/                    Java kód vkladaný do APK
-  test/                   test logiky panelu na PC (run.sh)
+  build-all.sh                the whole build in one command
+  manifest-inject.xml         Tor components for the manifest
+  src/                        Java code injected into the APK
+  test/                       panel logic test on the PC (run.sh)
 tools/
-  find_quic.py            nájde v dekompilovanom Messengeri miesta, kde sa zapína QUIC
-.github/workflows/build-apk.yml   build v GitHub Actions
+  find_quic.py                finds where QUIC is enabled in decompiled Messenger
+.github/workflows/build-apk.yml   build in GitHub Actions
 ```
 
 ## Build
 
-Potrebuješ: Linux, **JDK 17**, Android SDK (build-tools + platforms), **NDK r27**
-(`ndk-build`), Python 3 s **Pillow** (`pip install pillow`), `curl`, `git`, `zip`.
+You need: Linux, **JDK 17**, the Android SDK (build-tools + platforms), **NDK r27**
+(`ndk-build`), Python 3 with **Pillow** (`pip install pillow`), `curl`, `git`, `zip`.
 
-### Lokálne
+### Locally
 
 ```bash
 IN_APK=messenger.apk \
-KEYSTORE=spravaren.keystore KS_PASS=heslo \
+KEYSTORE=spravaren.keystore KS_PASS=password \
 ANDROID_HOME=~/Android/Sdk \
 ANDROID_NDK=~/Android/Sdk/ndk/27.3.13750724 \
 bash tor-inject/build-all.sh          # -> tor-inject/spravaren-signed.apk
 ```
 
-| Premenná | Význam |
+| Variable | Meaning |
 |---|---|
-| `IN_APK` | **originálne** Messenger APK (podpis Facebooku sa overuje) |
-| `KEYSTORE`, `KS_PASS`, `KS_ALIAS` | tvoj podpisový kľúč (`KS_ALIAS` default `spravaren`) |
-| `ANDROID_HOME`, `ANDROID_NDK` | SDK a NDK |
-| `OUT_APK`, `CACHE` | voliteľné: výstup a priečinok na stiahnuté nástroje |
+| `IN_APK` | the **original** Messenger APK (Facebook's signature is verified) |
+| `KEYSTORE`, `KS_PASS`, `KS_ALIAS` | your signing key (`KS_ALIAS` defaults to `spravaren`) |
+| `ANDROID_HOME`, `ANDROID_NDK` | SDK and NDK |
+| `OUT_APK`, `CACHE` | optional: output file and folder for downloaded tools |
 
-Kľúč vyrobíš napr. `keytool -genkeypair -keystore spravaren.keystore -alias spravaren
--keyalg RSA -keysize 4096 -validity 36500`. **Ten istý kľúč používaj stále**: nová verzia sa
-potom nainštaluje cez starú a ostane prihlásenie.
+Make a key with e.g. `keytool -genkeypair -keystore spravaren.keystore -alias spravaren
+-keyalg RSA -keysize 4096 -validity 36500`. **Always use the same key**: a new version then
+installs over the old one and you stay logged in.
 
 ### GitHub Actions
 
-1. V repe nastav *Settings → Secrets and variables → Actions*:
+1. In the repo set *Settings → Secrets and variables → Actions*:
    `SIGNING_KEYSTORE_B64` (`base64 -w0 spravaren.keystore`), `SIGNING_KEYSTORE_PASS`
-   a voliteľne `SIGNING_KEY_ALIAS`.
-2. *Actions → Build Spravaren APK → Run workflow* a vlož **priamy odkaz na originálne APK**.
-3. Hotové APK je artifact behu `spravaren-apk` (platí 1 deň, ~10 min build).
+   and optionally `SIGNING_KEY_ALIAS`.
+2. *Actions → Build Spravaren APK → Run workflow* and paste a **direct link to the original
+   APK**.
+3. The finished APK is the run's `spravaren-apk` artifact (kept 1 day, ~10 min build).
 
-> V **verejnom** repe si artifact môže stiahnuť ktokoľvek prihlásený na GitHube. Ak ti to
-> vadí, nechaj repo súkromné.
+> In a **public** repo anyone signed in to GitHub can download the artifact. If that bothers
+> you, keep the repo private.
 
-## Inštalácia a prvé spustenie
+## Install and first run
 
-**Z mobilu (bez PC):** stiahni artifact (je to ZIP, v appke *Súbory* ho rozbaľ), ťukni na APK,
-povoľ inštaláciu z tohto zdroja a pri Play Protect zvoľ *Napriek tomu nainštalovať*.
+**From the phone (no PC):** download the artifact (it is a ZIP, unpack it in the *Files* app),
+tap the APK, allow installs from that source and on the Play Protect prompt choose *Install
+anyway*.
 
-**Cez adb:**
+**Via adb:**
 
 ```bash
 adb install -r spravaren-tor-signed.apk
-adb shell appops set com.facebook.orca ACTIVATE_VPN allow   # vopred povolí VPN
+adb shell appops set com.facebook.orca ACTIVATE_VPN allow   # pre-allows the VPN
 ```
 
-- Prvý raz Android spýta **povolenie VPN** (cez to ide Tor): potvrď OK. Ak ho zamietneš,
-  appka nemá sieť; povolíš ho cez `appops` vyššie.
-- Build podpísaný **iným kľúčom** než appka v telefóne sa nenainštaluje cez starú (Android
-  hlási „konflikt balíka“). Vtedy starú odinštaluj, **prihlásenie sa stratí**.
-- **Prihlásenie cez Tor:** Facebook niektoré exit uzly blokuje. Ak sa captcha nenačíta alebo
-  login zlyhá, zavri appku, počkaj ~3 minúty (zmizne 🔑 zo stavovej lišty) a skús znova —
-  dostaneš iný exit.
+- The first time, Android asks for **VPN permission** (Tor runs through it): confirm OK. If you
+  deny it, the app has no network; grant it with the `appops` command above.
+- A build signed with a **different key** than the app on the phone will not install over it
+  (Android reports a package conflict). Then uninstall the old one; **you lose the login**.
+- **Logging in over Tor:** Facebook blocks some exit nodes. If the captcha does not load or
+  login fails, close the app, wait ~3 minutes (the 🔑 disappears from the status bar) and try
+  again, you get a different exit.
 
-## Ovládanie panelu
+## Panel controls
 
-| Gesto | Čo urobí |
+| Gesture | What it does |
 |---|---|
-| ťuk na riadok dátumu / info | zoznam narodenín (**Pridať**) |
-| ťuk na kartu v zozname | úprava (meno + kolieska deň / mesiac / rok) |
-| podržanie karty | zmazanie |
-| ťuk na riadok počasia | obnoví počasie a správy |
-| podržanie panelu | **nový Tor okruh** (nová exit IP), bublina s výsledkom |
-| potiahnutie zoznamu nadol | filtre All / Unread / Groups (správanie Messengera) |
+| tap the date / info row | birthday list (**Add**) |
+| tap a card in the list | edit (name + day / month / year wheels) |
+| long-press a card | delete |
+| tap the weather row | refreshes weather and news |
+| long-press the panel | **new Tor circuit** (new exit IP), a bubble shows the result |
+| pull the list down | All / Unread / Groups filters (Messenger's own behaviour) |
 
-Narodeniny sú **len v telefóne** (`SharedPreferences`), nikam sa neposielajú. K menám panel
-nájde aj meniny (slovenský, inak český kalendár), takže pri „Miška (Michaela)“ ukáže aj
-meniny. Upozornenie na narodeniny sa ukáže v paneli, keď appku otvoríš; notifikácie sú
-vypnuté zámerne.
+Birthdays are **only on the phone** (`SharedPreferences`), nothing is sent anywhere. From the
+names the panel also finds name days (Slovak calendar, otherwise Czech), so for "Miška
+(Michaela)" it shows the name day too. A birthday reminder appears in the panel when you open
+the app; notifications are off by design.
 
-## Testovanie
+## Testing
 
-**Logika panelu na PC** (narodeniny, meniny, Veľká noc, sviatky, parsovanie dátumov):
-
-```bash
-bash tor-inject/test/run.sh        # očakávaný výstup: VSETKO OK
-```
-
-**Na telefóne:** testovací protokol (T1–T23), požiadavky a posledné výsledky sú v
-[`docs/POZIADAVKY-A-TESTY.md`](docs/POZIADAVKY-A-TESTY.md). Testuj len **v chate so sebou**,
-nikdy nie v chatoch s inými ľuďmi (každý otvorený chat posiela „videné“).
-
-Užitočné príkazy:
+**Panel logic on the PC** (birthdays, name days, Easter, holidays, date parsing):
 
 ```bash
-adb logcat -s OrcaTor:*                       # stav Toru a tunela
-adb shell ip addr show tun0                   # tunel (198.18.0.1)
-adb shell dumpsys activity top | less         # skutočná hierarchia views (Litho)
+bash tor-inject/test/run.sh        # expected output: VSETKO OK
 ```
 
-## Nová verzia Messengera
+**On the phone:** the test protocol (T1–T23), the requirements and the latest results are in
+[`docs/REQUIREMENTS-AND-TESTS.md`](docs/REQUIREMENTS-AND-TESTS.md). Test only **in a chat with
+yourself**, never in chats with other people (every opened chat sends a "seen").
 
-Patche sú písané tak, aby prežili zmenu verzie, ale obfuskácia sa mení. Postup:
+Useful commands:
 
-1. Skús build s novým APK. Skripty zlyhajú **nahlas** (assert), nie potichu: `panel_hook.py`
-   očakáva presne jednu továreň na Stories pás, `no_quic.py` a hev majú vlastné kontroly.
-2. Ak `panel_hook.py` nenájde továreň, pozri smali nového APK: hľadá sa statická metóda
-   `(Context)` vracajúca obal nad `RecyclerView` (`<init>(Context, RecyclerView)`).
-3. Ak sa pokazí niečo vo vlákne (fotky, emoji, história), pozri `MSG_WHITELIST` a
-   `MEDIA_WHITELIST` v `patches/nuclear_chatonly.py` a zoznamy v `patches/cuts.json`.
-4. `tools/find_quic.py` nájde miesta, kde sa zapína QUIC, ak by sa zmenili.
+```bash
+adb logcat -s OrcaTor:*                       # Tor and tunnel state
+adb shell ip addr show tun0                   # the tunnel (198.18.0.1)
+adb shell dumpsys activity top | less         # the real view hierarchy (Litho)
+```
 
-## Známe obmedzenia
+## New Messenger version
 
-- **Žiadne notifikácie**, kým je appka zavretá. Správy sa natiahnu po otvorení. Je to cena
-  za „nič sa nebudí na pozadí“.
-- Kontakty sa nesynchronizujú (sync adaptér a authenticator sú vypnuté).
-- Facebook blokuje niektoré Tor exit uzly (login, captcha). Pomáha nový okruh alebo počkať.
-- **Nálepky (stickers)** sa nenačítajú (karta ostáva na prázdnych štvorcoch, v logu bez chyby). GIFy a emoji
-  idú. Príčina nie je potvrdená.
-- Ak sa bootstrap Toru nechytí do 90 s, brána ponúkne opakovanie; sieť je dovtedy zavretá.
-- Funguje len na **arm64**.
+The patches are written to survive a version change, but obfuscation changes. Procedure:
 
-## Bezpečnosť a právne
+1. Try the build with the new APK. The scripts fail **loudly** (assert), not silently:
+   `panel_hook.py` expects exactly one Stories strip factory, `no_quic.py` and hev have their
+   own checks.
+2. If `panel_hook.py` does not find the factory, look at the new APK's smali: it looks for a
+   static `(Context)` method returning a wrapper around a `RecyclerView`
+   (`<init>(Context, RecyclerView)`).
+3. If something in the thread breaks (photos, emoji, history), look at `MSG_WHITELIST` and
+   `MEDIA_WHITELIST` in `patches/nuclear_chatonly.py` and the lists in `patches/cuts.json`.
+4. `tools/find_quic.py` finds where QUIC is enabled, should that change.
 
-- Používaj len **vlastné APK** na **vlastnom zariadení**. Nikdy nenahrávaj upravené APK ani
-  kód Mety na GitHub.
-- Podpisový kľúč a jeho heslo nikdy necommituj (`*.keystore`, `*.jks` sú v `.gitignore`).
-- Spravaren je neoficiálna úprava; Meta ju nepodporuje a môže zablokovať účet.
+## Known limitations
+
+- **No notifications** while the app is closed. Messages load once you open it. This is the
+  price of "nothing wakes up in the background".
+- Contacts are not synced (the sync adapter and authenticator are disabled).
+- Facebook blocks some Tor exit nodes (login, captcha). A new circuit or waiting helps.
+- **Stickers** do not load (the card stays on empty squares, no error in the log). GIFs and
+  emoji work. The cause is not confirmed.
+- If Tor's bootstrap does not catch within 90 s, the gate offers a retry; the network stays
+  closed until then.
+- Works on **arm64** only.
+
+## Safety and legal
+
+- Use only your **own APK** on your **own device**. Never upload a modified APK or Meta code to
+  GitHub.
+- Never commit the signing key or its password (`*.keystore`, `*.jks` are in `.gitignore`).
+- Spravaren is an unofficial modification; Meta does not support it and may block the account.
