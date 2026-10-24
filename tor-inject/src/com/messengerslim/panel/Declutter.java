@@ -22,7 +22,7 @@ final class Declutter {
 
     /** id_0x7f0b0d04: TextView pasu "Notifications are currently off. Tap to turn on." (584) */
     private static final int NOTIF_BANNER_ID = 0x7f0b0d04;
-    private static final long[] AT_MS = { 0, 1500, 4000 };
+    private static final long[] AT_MS = { 0, 1500, 4000, 9000 };
 
     private Declutter() {}
 
@@ -59,6 +59,12 @@ final class Declutter {
                     v.setForeground(new SearchCover(night(v), v.getResources().getDisplayMetrics().density));
                 }
             }
+            // pilulka je kreslena Lithom bez View s popisom -> hladame hostitela podla polohy a
+            // velkosti: sirka ~cela, vyska 3-7 % obrazovky, hned pod nadpisom (10-18 % vysky)
+            View host = findSearchHost(root, root.getWidth(), root.getHeight(), 0);
+            if (host != null && !(host.getForeground() instanceof SearchCover)) {
+                host.setForeground(new SearchCover(night(host), host.getResources().getDisplayMetrics().density));
+            }
             found.clear();
             root.findViewsWithText(found, "Messenger", View.FIND_VIEWS_WITH_CONTENT_DESCRIPTION);
             int[] loc = new int[2];
@@ -73,6 +79,24 @@ final class Declutter {
                 }
             }
         } catch (Throwable ignore) {}
+    }
+
+    private static View findSearchHost(View v, int w, int h, int depth) {
+        if (v == null || depth > 12 || w <= 0 || h <= 0) return null;
+        if (v instanceof ViewGroup && v.getVisibility() == View.VISIBLE && v.getWidth() >= w * 0.95f) {
+            int[] loc = new int[2];
+            v.getLocationOnScreen(loc);
+            if (loc[1] >= h * 0.10f && loc[1] <= h * 0.18f
+                    && v.getHeight() >= h * 0.03f && v.getHeight() <= h * 0.07f) return v;
+        }
+        if (v instanceof ViewGroup) {
+            ViewGroup g = (ViewGroup) v;
+            for (int i = 0; i < g.getChildCount(); i++) {
+                View r = findSearchHost(g.getChildAt(i), w, h, depth + 1);
+                if (r != null) return r;
+            }
+        }
+        return null;
     }
 
     private static boolean night(View v) {
@@ -92,11 +116,15 @@ final class Declutter {
         }
 
         @Override public void draw(Canvas c) {
-            Rect b = getBounds();
-            c.drawRoundRect(b.left, b.top, b.right, b.bottom, b.height() / 2f, b.height() / 2f, bg);
-            fg.setTextSize(b.height() * 0.36f);
+            Rect h = getBounds();
+            // hostitel je sirsi/vyssi nez pilulka: okraje ~3,9 % sirky, pilulka = horne ~87 % vysky
+            float l = h.left + h.width() * 0.0389f, r = h.right - h.width() * 0.0389f;
+            float t = h.top, bt = h.top + h.height() * 0.868f;
+            float ph = bt - t;
+            c.drawRoundRect(l, t, r, bt, ph / 2f, ph / 2f, bg);
+            fg.setTextSize(ph * 0.36f);
             Paint.FontMetrics fm = fg.getFontMetrics();
-            c.drawText("🔍  Hľadať", b.left + 20 * d, b.centerY() - (fm.ascent + fm.descent) / 2f, fg);
+            c.drawText("🔍  Hľadať", l + 20 * d, (t + bt) / 2f - (fm.ascent + fm.descent) / 2f, fg);
         }
 
         @Override public void setAlpha(int a) {}
