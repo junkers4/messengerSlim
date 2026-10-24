@@ -37,6 +37,12 @@ jobs:
           distribution: temurin
           java-version: "17"
 
+      # branding.py prefarbuje ikonku cez Pillow
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - run: pip install pillow
+
       # najnovsie NDK na runneri (r30) lwip v hev neskompiluje -> pevne r27d
       - name: NDK r27d
         run: |

@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Cele zostavenie Spravarne z ORIGINALNEHO Messenger APK (od Facebooku) jednym prikazom:
-#   overenie podpisu -> APKEditor decode -> chat-only rezy -> QUIC off -> manifest
+#   overenie podpisu -> APKEditor decode -> chat-only rezy -> QUIC off -> branding
+#   (nazov Spravaren, cierna ikonka) -> manifest
 #   (Tor komponenty, bez budenia na pozadi) -> nas Java kod -> libTor + libhev -> build,
 #   zipalign, podpis.
 #
@@ -81,9 +82,10 @@ for c in $FB_CERTS; do grep -q "certificate SHA-256 digest: $c" "$WORK/certs.txt
 echo "== 2) APKEditor decode (smali) =="
 java -jar "$APKEDITOR" d -i "$IN_APK" -o "$WORK/decoded"
 
-echo "== 3) chat-only rezy + QUIC off =="
+echo "== 3) chat-only rezy + QUIC off + branding =="
 python3 "$REPO/scripts/py/nuclear_chatonly.py" "$WORK/decoded" --report "$WORK/cuts.txt"
 python3 "$REPO/scripts/py/no_quic.py" "$WORK/decoded"
+python3 "$REPO/scripts/py/branding.py" "$WORK/decoded"
 
 echo "== 4) manifest: Tor komponenty + bez budenia na pozadi =="
 python3 - "$WORK/decoded/AndroidManifest.xml" "$HERE/manifest-inject.xml" <<'PY'

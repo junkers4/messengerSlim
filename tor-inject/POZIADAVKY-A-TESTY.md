@@ -11,26 +11,14 @@ Build: `work/slim_wp-signed.apk` (slim + branding) → `tor-inject/build.sh` →
 | R2 | Po `READY` brána zmizne (krátke „Connected") a **polling sa zastaví** — v bežnom behu nesmie nič cyklicky bežať. | `TorGate.startPolling` / `detach` |
 | R3 | 3 min po odchode na pozadie sa zloží Tor aj tunel (VPN kľúč zmizne) a **zabije sa Messenger aj `:tor` proces**. | `LifecycleWatcher.GRACE_MS`, `OrcaTorVpnService.quit()` |
 | R4 | Appka sa **nesmie prebudiť na pozadí** (žiadny push, boot, sync adaptér). Ak ju systém aj tak naštartuje, proces sa sám ukončí. | `scripts/py/no_background_manifest.py` (+ `android.content.SyncAdapter`, `android.accounts.AccountAuthenticator`), `TorBootProvider.disableWakeComponents` + `killIfBackgroundWake` |
-| R5 | **Emoji, nálepky, GIF a fotky sa musia vykresliť a dať poslať.** | `WeatherPanel` — prísna detekcia Stories pásu (viď nižšie) |
+| R5 | **Emoji, nálepky, GIF a fotky sa musia vykresliť a dať poslať.** | pôvodný Messenger UI bez zásahu do recyclerov (panel zrušený) |
 | R6 | Vlákno musí zobraziť históriu aj vlastné odoslané správy. | `nuclear_chatonly.py` → `MSG_WHITELIST` (mqtt/msys/mailbox/…) |
 | R7 | Spodná navigácia zostáva **pôvodná** (Chats / Stories / Notifications / Menu) — žiadny vlastný bar. | `SpravarenTabBar.java` zmazaný |
-| R8 | Chod musí byť plynulý — žiadne periodické prechádzanie view hierarchie. | zrušený 400 ms polling tab baru; panel sa rozhoduje len pri stavbe tray-u |
-| R9 | Panel na mieste Stories pásu: počasie, detail dňa, dátum + meniny (SK) + svátek (CZ) + fáza mesiaca, bežiaci pás správ + „v tento deň". | `WeatherPanel.build()` |
-| R10 | Dáta panelu sa ťahajú **cez Tor** a musia dobehnúť aj keď tunel ešte nestál. | `TRIES`/`RETRY_DELAY_MS` v `WeatherPanel` |
+| R8 | Chod musí byť plynulý — žiadne periodické prechádzanie view hierarchie. | zrušený 400 ms polling tab baru aj panel |
+| R9 | Názov appky **Spravaren**, ikonka = pôvodná Messenger bublina, len **čierna** namiesto modrej. Žiadny panel (počasie, meniny, správy) ani vlastné obrázky. | `scripts/py/branding.py` (volá ho `build-all.sh`) |
 | R11 | Po `READY` sa cez Tor hneď otvorí spojenie na `edge-mqtt.facebook.com:443`, aby bol okruh pripravený; keď exit zlyhá, vyžiada sa nový okruh (`NEWNYM`), max 3 pokusy. | `OrcaTorVpnService.startWarmUp`, `TorController.probe` |
 | R12 | Ťuknutie na fotku vo vlákne ju otvorí na celú obrazovku (zoom, uloženie). | `MEDIA_WHITELIST` v `nuclear_chatonly.py`, `activityWhitelist` + `$mediaKeepRegex` v `apply-nuclear-chatonly.ps1` |
 | R13 | **QUIC (UDP) je vypnutý** — Tor UDP neprenesie, takže fotky/videá/DGW išli až po timeoute. Teraz idú hneď cez TCP. | `scripts/py/no_quic.py` (`QuicSettings$Builder.build`, `MNSDGWNetworkStackConfig.<init>`) |
-
-### Prečo je detekcia Stories pásu prísna
-
-`X/2ml.A04` je **zdieľaná** factory na *každý* recycler v appke — zoznam správ, inbox,
-emoji mriežka, mriežka fotiek aj Stories pás. Pôvodná podmienka („nízky tray") trafila aj
-emoji/foto tray a tie sa skryli → **prázdne emoji a fotky**. Teraz musí tray splniť všetko:
-
-1. výška 48–260 dp (Stories pás má ~128 dp),
-2. horný okraj v hornej polovici okna (emoji/foto tray vyskakujú zdola),
-3. vodorovný recycler — a keďže Litho nasadí vodorovný layout manager až pri mountnutí,
-   čaká sa naň do 2 s a až potom rozhodne geometria.
 
 ## Testovací protokol
 
@@ -41,7 +29,7 @@ Príprava: `export PATH=$PATH:$HOME/Android/Sdk/platform-tools`, telefón cez US
 | T1 | Tor pásik | `adb shell am force-stop com.facebook.orca`, spustiť appku, screenshot po 2 s | Hore čierny pásik s cibuľou, „Connecting to Tor… NN %“, pod ním inbox |
 | T2 | Appka použiteľná počas nábehu | počas pásika ťuknúť na chat | Chat sa otvorí, história sa zobrazí; `adb shell dumpsys connectivity` ani `logcat` neukazujú prevádzku mimo `tun0` |
 | T3 | Brána zmizne | screenshot ~15 s po štarte; `adb logcat -d -s OrcaTor:*` | „Messenger je teraz smerovany cez Tor.", brána preč |
-| T4 | Panel | screenshot inboxu | 4 riadky: mesto+teplota / pocit+max-min+dážď+vietor+východ-západ / dátum+meniny+CZ+mesiac / bežiaci pás správ |
+| T4 | Názov a ikonka | launcher + `adb shell dumpsys package com.facebook.orca \| grep -i label` | Pod ikonkou „Spravaren", čierna bublina s bielym bleskom; nad inboxom žiadny panel |
 | T5 | Pôvodná navigácia | screenshot inboxu | Chats · Stories · Notifications · Menu (modrý, natívny) |
 | T6 | Vlákno | otvoriť prvý chat | Vykreslí sa história aj vlastné správy |
 | T7 | Emoji | ikonka smajlíka v compose → záložka smajlík | „Recent" + mriežka emoji + spodná lišta kategórií |
@@ -77,29 +65,18 @@ Príprava: `export PATH=$PATH:$HOME/Android/Sdk/platform-tools`, telefón cez US
 * Žiadne notifikácie, keď je appka zavretá — to je zámer (bez budenia niet úniku); správy sa
   natiahnu po otvorení.
 * Kontakty sa nesynchronizujú (sync adaptér aj authenticator sú vypnuté) — to je cena za R4.
-* Panel ťahá dáta z `api.open-meteo.com`, `news.google.com` a `cs.wikipedia.org` cez Tor;
-  keď exit uzol niektorý zdroj blokuje, riadok jednoducho ostane bez dát (skúša 5× po 8 s).
 * Ak sa bootstrap nechytí do 90 s, brána ponúkne opakovanie ťuknutím; siet je dovtedy zavretá.
 
 ## Build
 
-```bash
-cd tor-inject
-B=~/Desktop/messenger/.build
-APKEDITOR=$B/dl/APKEditor.jar \
-IN_APK=~/Desktop/messenger/messengerSlim/work/slim_wp-signed.apk \
-LIBTOR=$B/dl/tor-eb/tor/libTor.so \
-LIBHEV=$B/jni/libs/arm64-v8a/libhev-socks5-tunnel.so \
-bash build.sh
-adb install -r orca-tor-signed.apk
-```
-
-Slim základ (`work/slim_wp-signed.apk`) sa na čistom dekódovanom strome (apktool, smali) pripraví takto:
+Jedným príkazom z originálneho APK (lokálne aj v GitHub Actions), viď README:
 
 ```bash
-python3 scripts/py/nuclear_chatonly.py work/decoded_fresh   # cuts (prehliadač fotiek už ostáva)
-python3 scripts/py/no_quic.py work/decoded_fresh            # QUIC off -> všetko cez TCP/Tor
+IN_APK=messenger.apk KEYSTORE=spravaren.keystore KS_PASS=... \
+ANDROID_HOME=~/Android/Sdk ANDROID_NDK=~/Android/Sdk/ndk/27.2.12479018 \
+bash tor-inject/build-all.sh
+adb install -r tor-inject/spravaren-signed.apk
 ```
 
-Prestavuje sa len keď sa menia cuts alebo branding —
-zdroj je strom `work/decoded_fresh` (obsahuje aj hook `X/2ml.A04 → WeatherPanel.install`).
+Na update bez straty prihlásenia musí byť APK podpísané tým istým kľúčom ako to v telefóne
+(secret `SIGNING_KEYSTORE_B64`), preto sa build pre telefón robí cez Actions.

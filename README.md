@@ -15,6 +15,9 @@ Tor baked directly into the app. Only Messenger goes through Tor. One app, one i
 2. **`scripts/` — the slim cut workflow.** PowerShell patch sets that no-op Messenger
    features (Stories, Reels, Marketplace, Meta AI, background services) for a chat-only,
    low-battery build.
+3. **Branding.** The app is called **Spravaren** and keeps the original Messenger icon,
+   only black instead of blue (`scripts/py/branding.py`). No extra panels or custom
+   pictures: the weather, name days and news panel is gone.
 
 ## Repository layout
 
@@ -107,6 +110,7 @@ Trade-off: because Tor stops on close, messages arrive only once you open Messen
 [`tor-inject/build-all.sh`](tor-inject/build-all.sh) builds the whole app from the
 **original** Messenger APK: verifies Facebook's signature, applies the chat-only cuts
 (`scripts/py/nuclear_chatonly.py`), turns QUIC off (`scripts/py/no_quic.py`), injects Tor,
+renames the app to Spravaren with a black icon (`scripts/py/branding.py`, needs Pillow),
 compiles `libhev-socks5-tunnel.so` with the NDK, downloads a pinned Tor expert bundle and
 APKEditor (SHA-256 checked), then builds, aligns and signs.
 
@@ -135,13 +139,21 @@ platform-35), NDK, [APKEditor](https://github.com/REAndroid/APKEditor):
 
 ## Install
 
+**From the phone (no PC):** download the APK (the `spravaren-apk` artifact of the Actions
+run is a ZIP; open it in *Files* and extract it), tap it, allow installs from this source,
+and confirm *Install anyway* if Play Protect asks. On the first start Android asks for the
+VPN permission: tap OK, Tor runs through it.
+
+An update signed with the **same key** (the `SIGNING_KEYSTORE_B64` secret) installs over the
+old app and keeps the login. Only a build signed with a different key needs the old app
+uninstalled first (Android says *"app not installed"* / *"package conflicts"*).
+
+**With adb:**
+
 ```bash
-adb uninstall com.facebook.orca        # FIRST time: re-sign != FB signature, login is lost
-adb install --no-incremental orca-tor-signed.apk
+adb install -r spravaren-tor-signed.apk                     # same key: login kept
 adb shell appops set com.facebook.orca ACTIVATE_VPN allow   # pre-grant VPN consent
 ```
-
-Later updates with the same debug key: `adb install -r ...` (login preserved).
 
 ## Known limitation
 
