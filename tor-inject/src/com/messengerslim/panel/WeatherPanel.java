@@ -173,14 +173,13 @@ public final class WeatherPanel {
         final TextView dayline = line(ctx, 12, 0xFFB388FF, (int) (3 * d));
         dayline.setText(dateLine());
 
-        // 3b. narodeniny do 7 dni (len ak su)
-        final TextView bday = line(ctx, 13, 0xFFFFD54F, (int) (2 * d));
+        // 4. info riadok - vzdy prave jeden (panel ma miesto na 5 riadkov):
+        //    narodeniny, inak statny sviatok, inak zajtrajsie meniny
+        final TextView bday = line(ctx, 12, 0xFFFFD54F, (int) (2 * d));
+        bday.setSingleLine(true);
+        bday.setEllipsize(android.text.TextUtils.TruncateAt.END);
         final Runnable refreshBday = new Runnable() {
-            public void run() {
-                String b = Birthdays.line(bday.getContext());
-                bday.setText(b != null ? b : "");
-                bday.setVisibility(b != null ? View.VISIBLE : View.GONE);
-            }
+            public void run() { bday.setText(infoLine(bday.getContext())); }
         };
         refreshBday.run();
         View.OnClickListener openBday = new View.OnClickListener() {
@@ -189,9 +188,10 @@ public final class WeatherPanel {
         dayline.setOnClickListener(openBday);
         bday.setOnClickListener(openBday);
 
-        // 5. riadok: Tor overenie + exit IP
-        final TextView torline = line(ctx, 10, 0xFF7E57C2, (int) (3 * d));
-        torline.setText("🧅 overujem Tor…");
+        // Tor znacka za pocasim: 🧅✓ overene cez check.torproject.org, ⚠️ ak nie
+        final TextView torMark = line(ctx, 15, Color.WHITE, 0);
+        torMark.setPadding((int) (8 * d), 0, 0, 0);
+        torMark.setText("🧅…");
 
         // 4. riadok: bezici pas - titulky + "v tento den" z historie
         final TextView ticker = line(ctx, 13, 0xFFBEBEBE, (int) (4 * d));
@@ -202,33 +202,38 @@ public final class WeatherPanel {
         ticker.setSelected(true);
         ticker.setText("📰 načítavam správy…");
 
-        box.addView(weather);
+        LinearLayout head = new LinearLayout(ctx);
+        head.setOrientation(LinearLayout.HORIZONTAL);
+        head.setGravity(Gravity.CENTER);
+        head.addView(weather);
+        head.addView(torMark);
+        box.addView(head);
         box.addView(detail);
         box.addView(dayline);
         box.addView(bday);
         box.addView(ticker);
-        box.addView(torline);
 
         weather.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
                 weather.setText(CITY + " · obnovujem…");
                 fetchWeatherAsync(weather, detail);
                 fetchTickerAsync(ticker);
-                fetchTorAsync(torline, 0);
+                fetchTorAsync(torMark, 0, false);
             }
         });
         box.setOnLongClickListener(new View.OnLongClickListener() {
             public boolean onLongClick(View v) {
                 newCircuit(v.getContext());
-                torline.setText("🧅 nový okruh…");
-                fetchTorAsync(torline, 4000);
+                torMark.setText("🧅…");
+                android.widget.Toast.makeText(v.getContext(), "🧅 Nový Tor okruh…", android.widget.Toast.LENGTH_SHORT).show();
+                fetchTorAsync(torMark, 4000, true);
                 return true;
             }
         });
 
         fetchWeatherAsync(weather, detail);
         fetchTickerAsync(ticker);
-        fetchTorAsync(torline, 0);
+        fetchTorAsync(torMark, 0, false);
         return box;
     }
 
@@ -519,13 +524,20 @@ public final class WeatherPanel {
         String cz = pick(SVATKY, m, day);
         if (cz != null && !cz.equals(sk)) sb.append("  ·  CZ ").append(cz);
         sb.append("  ·  ").append(moon(cal));
+        return sb.toString();
+    }
+
+    /** Info riadok: narodeniny > statny sviatok > zajtrajsie meniny. Tuk = narodeniny. */
+    static String infoLine(Context ctx) {
+        String b = Birthdays.line(ctx);
+        if (b != null) return b;
+        Calendar cal = Calendar.getInstance();
         String hol = holidaySk(cal);
-        if (hol != null) sb.append("\n🇸🇰 ").append(hol);
+        if (hol != null) return "🇸🇰 " + hol + "  ·  🎂 ťukni = narodeniny";
         Calendar tm = (Calendar) cal.clone();
         tm.add(Calendar.DAY_OF_MONTH, 1);
         String next = pick(MENINY, tm.get(Calendar.MONTH), tm.get(Calendar.DAY_OF_MONTH));
-        if (next != null && holidaySk(tm) == null) sb.append(hol != null ? "  ·  " : "\n").append("zajtra: ").append(next);
-        return sb.toString();
+        return (next != null ? "zajtra má meniny " + next + "  ·  " : "") + "🎂 ťukni = narodeniny";
     }
 
     private static String pick(String[][] table, int month, int day) {
@@ -600,30 +612,43 @@ public final class WeatherPanel {
 
     // ---- Tor: overenie cez check.torproject.org + novy okruh ----
 
-    private static void fetchTorAsync(final TextView target, final long delayMs) {
+    private static void fetchTorAsync(final TextView mark, final long delayMs, final boolean toast) {
         final Handler main = new Handler(Looper.getMainLooper());
         new Thread(new Runnable() {
             public void run() {
                 sleep(delayMs);
                 for (int i = 0; i < TRIES; i++) {
-                    String r = torCheck(get("https://check.torproject.org/api/ip"));
-                    if (r != null) { post(main, target, r); return; }
+                    final String[] r = torCheck(get("https://check.torproject.org/api/ip"));
+                    if (r != null) {
+                        main.post(new Runnable() {
+                            public void run() {
+                                try {
+                                    mark.setText(r[0]);
+                                    if (toast || !"🧅✓".equals(r[0])) {
+                                        android.widget.Toast.makeText(mark.getContext(), r[1],
+                                                android.widget.Toast.LENGTH_LONG).show();
+                                    }
+                                } catch (Throwable ignore) {}
+                            }
+                        });
+                        return;
+                    }
                     sleep(RETRY_DELAY_MS);
                 }
-                post(main, target, "🧅 Tor sa nedá overiť");
+                post(main, mark, "🧅?");
             }
         }, "swp-tor").start();
     }
 
-    /** {"IsTor":true,"IP":"1.2.3.4"} -> riadok do panelu, null pri chybe. */
-    static String torCheck(String json) {
+    /** {"IsTor":true,"IP":"1.2.3.4"} -> {znacka, sprava}, null pri chybe. */
+    static String[] torCheck(String json) {
         if (json == null) return null;
         try {
             JSONObject o = new JSONObject(json);
             String ip = o.optString("IP", "?");
             return o.optBoolean("IsTor", false)
-                    ? "🧅 cez Tor ✓  ·  exit " + ip + "  ·  podrž panel = nový okruh"
-                    : "⚠️ NIE cez Tor! (" + ip + ")";
+                    ? new String[] { "🧅✓", "🧅 Cez Tor ✓  ·  exit " + ip }
+                    : new String[] { "⚠️", "⚠️ Spojenie NEJDE cez Tor! (" + ip + ")" };
         } catch (Throwable t) {
             return null;
         }
@@ -636,6 +661,35 @@ public final class WeatherPanel {
             i.setClassName(ctx.getPackageName(), "com.messengerslim.tor.OrcaTorVpnService");
             ctx.startService(i);
         } catch (Throwable ignore) {}
+    }
+
+    private static java.util.Map<String, int[]> namedays;
+
+    /** Kedy ma meniny niektore slovo z mena ("Miška (Michaela)" -> Michaela): {mesiac 1-12, den, 1=CZ}. */
+    static synchronized int[] namedayOf(String fullName) {
+        if (namedays == null) {
+            namedays = new java.util.HashMap<>();
+            index(SVATKY, 1);
+            index(MENINY, 0);          // SK prepise CZ, ak je meno v oboch
+        }
+        for (String w : fullName.split("[^\\p{L}]+")) {
+            int[] r = namedays.get(fold(w));
+            if (r != null) return r;
+        }
+        return null;
+    }
+
+    private static void index(String[][] table, int cz) {
+        for (int m = 0; m < table.length; m++)
+            for (int d = 0; d < table[m].length; d++)
+                for (String n : table[m][d].split("[,/]"))
+                    if (n.trim().length() > 1) namedays.put(fold(n.trim()), new int[] { m + 1, d + 1, cz });
+    }
+
+    /** bez diakritiky a velkych pismen: "Miška" == "miska" */
+    static String fold(String s) {
+        return java.text.Normalizer.normalize(s, java.text.Normalizer.Form.NFD)
+                .replaceAll("\\p{M}", "").toLowerCase(java.util.Locale.ROOT);
     }
 
     public static String namedayToday() {

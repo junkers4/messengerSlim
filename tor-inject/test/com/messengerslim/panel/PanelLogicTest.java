@@ -47,6 +47,21 @@ public final class PanelLogicTest {
         eq("SNP", "Výročie SNP", WeatherPanel.holidaySk(day(2026, 8, 29)));
         eq("bezny den", null, WeatherPanel.holidaySk(day(2026, 10, 24)));
 
+        // meniny podla mena (SK, inak CZ) a riadok do panelu
+        eq("meniny Miška (Michaela) = CZ 19.10", "10/19/1", fmt(WeatherPanel.namedayOf("Miška (Michaela)")));
+        eq("meniny Kvetoslava = SK 24.10", "10/24/0", fmt(WeatherPanel.namedayOf("Kvetoslava")));
+        eq("meniny bez diakritiky", "10/24/0", fmt(WeatherPanel.namedayOf("kvetoslava")));
+        eq("nezname meno", null, fmt(WeatherPanel.namedayOf("Xyzzy")));
+        java.util.List<Birthdays.Entry> l = new java.util.ArrayList<>();
+        l.add(new Birthdays.Entry("Test", 24, 10, 1990));
+        l.add(new Birthdays.Entry("Miška (Michaela)", 29, 1, 0));
+        eq("riadok narodeniny + meniny", "🎂 Dnes Test (36)", Birthdays.line(l, day(2026, 10, 24)));
+        eq("riadok meniny o 3 dni", "🌸 meniny o 3 dni Miška (Michaela)",
+                Birthdays.line(l.subList(1, 2), day(2026, 10, 16)));
+        eq("riadok nic", null, Birthdays.line(l.subList(1, 2), day(2026, 6, 1)));
+        eq("kedy 4 dni", "o 4 dni", Birthdays.when(4));
+        eq("kedy 5 dni", "o 5 dní", Birthdays.when(5));
+
         System.out.println(fails == 0 ? "VSETKO OK" : fails + " CHYB");
         System.exit(fails == 0 ? 0 : 1);
     }

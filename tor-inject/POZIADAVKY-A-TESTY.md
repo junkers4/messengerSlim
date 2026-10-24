@@ -25,10 +25,10 @@ Build: originálne APK → `tor-inject/build-all.sh` (lokálne aj GitHub Actions
 
 | # | Požiadavka | Kde je riešená |
 |---|---|---|
-| P1 | Na mieste Stories pásu v inboxe je **panel**: mesto + teplota + oblačnosť, pocitová teplota, max/min, dážď, vietor, východ/západ slnka. | `SpravarenPanel` (Open-Meteo) |
+| P1 | Na mieste Stories pásu (584: hook v `X/2ne.A03`, hľadaný podľa tvaru) v inboxe je **panel**: mesto + teplota + oblačnosť, pocitová teplota, max/min, dážď, vietor, východ/západ slnka. | `SpravarenPanel` (Open-Meteo) |
 | P2 | Riadok dátumu: deň, **meniny SK**, **svátek CZ**, fáza mesiaca, **štátny sviatok SK**, ak je. | `Calendars` |
-| P3 | **Narodeniny**: dnes „🎂 Dnes: Meno (vek)“, do 7 dní „🎂 o N dni: Meno“. Len v appke — žiadne notifikácie, žiadne budenie (R4 ostáva). | `Birthdays` |
-| P4 | Narodeniny si pridávam sám: ťuk na riadok dátumu → zoznam + **Pridať** (meno, deň, mesiac, rok voliteľne). Dlhé podržanie položky → zmazať. Uložené len v telefóne (`SharedPreferences`), nikam sa neposielajú. | `BirthdayDialog` |
+| P3 | **Narodeniny**: dnes „🎂 Dnes Meno (vek)“, do 7 dní „🎂 o N dni Meno“. Len v appke — žiadne notifikácie, žiadne budenie (R4 ostáva). | `Birthdays.line` |
+| P4 | Narodeniny si pridávam sám: ťuk na riadok dátumu/info → zoznam (karty: meno, dátum slovom, o koľko dní, vek, meniny) + **Pridať**. Pridanie/úprava: meno + **kolieska deň / mesiac / rok** (rok voliteľný) + živý náhľad. Ťuk na kartu = upraviť, podržanie = zmazať. Len v telefóne (`SharedPreferences`). | `Birthdays.showDialog/showEdit` |
 | P5 | Bežiaci pás **slovenských správ** (Google News SK) + „v tento deň“. | `SpravarenPanel` |
 | P6 | Všetky dáta panelu idú **cez Tor** a dobehnú, aj keď tunel ešte nestál (opakovanie). Bez siete panel ukáže kalendár a narodeniny, ktoré sú lokálne. | `Net.get` (retry) |
 | P7 | **Stories preč**: pás nahradí panel, záložka Stories v spodnej lište nie je. | `SpravarenPanel`, `StoriesOff` |
@@ -40,7 +40,10 @@ Build: originálne APK → `tor-inject/build-all.sh` (lokálne aj GitHub Actions
 |---|---|---|
 | X1 | **Upozornenie na dážď**: ak v najbližších 3 h prší (≥ 50 %), v riadku počasia „☔ o 2 h dážď“. | `SpravarenPanel` (hourly) |
 | X2 | **Zajtra meniny**: „zajtra: Meno“ — nech sa dá pripraviť gratulácia. | `Calendars` |
-| X3 | **Tor riadok**: krajina exitu (vlajka) a čas posledného okruhu; dlhé podržanie panelu → **nový okruh** (NEWNYM). | `TorStatus` (exit z ControlPortu), `OrcaTorVpnService` |
+| X3 | **Tor značka** za počasím: 🧅✓ = overené cez `check.torproject.org` (prevádzka naozaj ide cez Tor), ⚠️ = nejde. Podržanie panelu → **nový okruh** (NEWNYM) + bublina s novou exit IP. | `WeatherPanel.fetchTorAsync`, `OrcaTorVpnService.ACTION_NEWNYM` |
+| X4 | **Meniny ľudí zo zoznamu**: meno sa hľadá v SK, inak CZ kalendári („Miška (Michaela)“ → CZ 19. 10.); do 7 dní „🌸 meniny o N dni Miška“. | `WeatherPanel.namedayOf`, `Birthdays.line` |
+| X5 | **Upratený inbox**: bez pásu „Notifications are currently off“ (vypnuté zámerne) a bez plávajúceho tlačidla Meta AI. | `Declutter` |
+| X6 | Panel má miesto na **5 riadkov**: počasie+🧅, detail, dátum, info (narodeniny > sviatok > zajtra meniny), správy. | `WeatherPanel.build` |
 
 ### Rýchlosť písania a načítania
 

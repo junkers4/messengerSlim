@@ -99,6 +99,9 @@ public class TorController {
                 // mobilny NAT zahadzuje necinne TCP po par minutach; caste keepalive udrzi
                 // spojenie na guard nazive (default 5 min = medzitym zaseknuty Tor)
                 "KeepalivePeriod 60\n" +
+                // exit, ktory Facebook blokuje, drzal spojenie 10-15 s, kym Tor skusil iny okruh
+                // ("We tried for 15 seconds to connect") - pri prihlaseni aj odoslani. 7 s staci.
+                "CircuitStreamTimeout 7\n" +
                 "Log notice stdout\n";
         try (OutputStream os = new FileOutputStream(torrc)) {
             os.write(cfg.getBytes(StandardCharsets.UTF_8));
