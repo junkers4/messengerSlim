@@ -19,7 +19,7 @@ Build: originálne APK → `tor-inject/build-all.sh` (lokálne aj GitHub Actions
 | R10 | DNS v tuneli ide cez hev `mapdns` (falošné IP 100.64/10 → meno ide do Toru). Build spadne, ak hev mapdns nemá. | `build-all.sh` (`HEV_COMMIT`, kontrola `"mapdns"`) |
 | R11 | Po `READY` sa cez Tor hneď otvorí spojenie na `edge-mqtt.facebook.com:443`, aby bol okruh pripravený; keď exit zlyhá, vyžiada sa nový okruh (`NEWNYM`), max 3 pokusy. | `OrcaTorVpnService.startWarmUp`, `TorController.probe` |
 | R12 | Ťuknutie na fotku vo vlákne ju otvorí na celú obrazovku (zoom, uloženie). | `MEDIA_WHITELIST` v `nuclear_chatonly.py`, `activityWhitelist` v `cuts.json` |
-| R13 | **QUIC (UDP) je vypnutý** — Tor UDP neprenesie, takže fotky/videá/DGW išli až po timeoute. Teraz idú hneď cez TCP. | `patches/no_quic.py` (`QuicSettings$Builder.build`, `MNSDGWNetworkStackConfig.<init>`) |
+| R13 | **QUIC (UDP) je vypnutý v proxygen klientovi** — Tor UDP neprenesie, takže fotky/videá/GIFy išli až po timeoute. Teraz idú hneď cez TCP. **DGW brána QUIC vypnutý nemá** (vypnutie spôsobovalo 49 chýb/min `INTERNAL_ERROR`). | `patches/no_quic.py` (`QuicSettings$Builder.build`) |
 
 ### Panel, narodeniny, bez Stories (2026-10-24)
 
@@ -79,6 +79,7 @@ Príprava: `export PATH=$PATH:$HOME/Android/Sdk/platform-tools`, telefón cez US
 | T16 | Panel | screenshot inboxu | Počasie, detail, dátum + meniny + svátek + mesiac (+ sviatok), narodeniny ak sú, bežiaci pás správ |
 | T17 | Narodeniny | ťuk na dátum → Pridať „Test“ s dnešným dátumom → späť | V paneli „🎂 Dnes: Test“; dlhé podržanie v zozname ho zmaže |
 | T18 | Bez Stories | screenshot inboxu | Žiadny Stories pás ani záložka Stories |
+| T19b | DGW slučka | `adb logcat --pid=$(pidof com.facebook.orca) \| grep -c "Restarting due to reason: StreamError"` po 60 s | 0 (s vypnutým DGW QUIC bolo 49) |
 | T19 | DNS v tuneli | `adb logcat --pid=$(pidof com.facebook.orca) \| grep -c getaddrinfo` po nábehu | 0 |
 | T20 | Studený štart | `force-stop`, štart, čas do zobrazenia inboxu s menami | zapísať (s) |
 | T21 | Otvorenie vlákna | ťuk na chat so sebou, čas do histórie | zapísať (s) |
@@ -107,12 +108,13 @@ Meralo sa na živom telefóne, správy len do chatu so sebou. „Čas“ z `adb`
 | T17 narodeniny | ✅ pridať / upraviť (kolieska) / zmazať, meniny podľa mena (Miška (Michaela) → CZ 19. 10.) |
 | T18 bez Stories | ✅ pás nahradený panelom |
 | T19 DNS v tuneli | ✅ 0 chýb `getaddrinfo` |
+| T19b DGW slučka | ✅ 0 reštartov za 60 s (pred opravou 49) |
 | T20 studený štart | ✅ inbox s chatmi ≈ 7,7–7,9 s (z toho ~2 s réžia merania) |
 | T22 odoslanie textu | ✅ „Sent“ do ≤ 2,7 s |
 | T23 nový okruh | ✅ `NEWNYM: 250 OK` + bublina „Nový Tor okruh“ |
 | Prijímanie | ✅ nové správy v inboxe naskakujú, kým je appka otvorená (latencia sa nemerala) |
 | GIF | ✅ načítajú sa |
-| **Nálepky (stickers)** | ❌ karta ostáva na prázdnych štvorcoch; úloha `acs_sync_LS_StickerSearch` padá na `INTERNAL_ERROR` |
+| **Nálepky (stickers)** | ❌ karta ostáva na prázdnych štvorcoch; po oprave DGW už bez chýb v logu, ale nič sa nenačíta |
 | Pole „Hľadať“ (X8) | ⏳ prekrytie sa ladí (hostiteľ sa nenašiel — opravené hĺbkou hľadania, čaká na overenie) |
 | T13 plynulosť, T21 otvorenie vlákna | ➖ dnes nemerané spoľahlivo |
 | Odoslanie fotky, hlasovej správy, hovory | ➖ netestované |
@@ -122,7 +124,7 @@ Meralo sa na živom telefóne, správy len do chatu so sebou. „Čas“ z `adb`
 * Žiadne notifikácie, keď je appka zavretá — to je zámer (bez budenia niet úniku); správy sa
   natiahnu po otvorení.
 * Kontakty sa nesynchronizujú (sync adaptér aj authenticator sú vypnuté) — to je cena za R4.
-* Nálepky sa nenačítajú (pozri vyššie); príčina nepotvrdená.
+* Nálepky sa nenačítajú (prázdne štvorce, v logu bez chyby); príčina nepotvrdená.
 * Ak sa bootstrap nechytí do 90 s, brána ponúkne opakovanie ťuknutím; siet je dovtedy zavretá.
 
 ## Build a inštalácia

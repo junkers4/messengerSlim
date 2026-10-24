@@ -1,14 +1,17 @@
 #!/usr/bin/env python3
 """
-Vypne QUIC (UDP) v Messengeri. Cez Tor UDP nejde: kazdy QUIC pokus (fotky, videa, GIFy,
-DGW transport) cakal na timeout a az potom appka presla na TCP. Bez QUIC ide vsetko rovno
+Vypne QUIC (UDP) v proxygen klientovi Messengera (fotky, videa, GIFy). Cez Tor UDP nejde:
+kazdy QUIC pokus cakal na timeout a az potom appka presla na TCP. Bez QUIC ide vsetko rovno
 cez TCP, teda hned cez Tor.
 
-Ciele nie su obfuskovane (com.facebook.proxygen, com.facebook.distribgw), takze patch sedi
-aj na novsie verzie Messengera:
+Ciel nie je obfuskovany (com.facebook.proxygen), takze patch sedi aj na novsie verzie:
   * QuicSettings$Builder.build(): prepinace mEnableQuicFbStatic/IgStatic/FbDevserver = false
     a zoznam hostitelov s QUIC (mHostsWithQuicEnabled) = "" - pred tym, nez sa precitaju.
-  * MNSDGWNetworkStackConfig.<init>: quicEnabled = false na konci konstruktora.
+
+POZOR: QUIC v DGW transporte (MNSDGWNetworkStackConfig.quicEnabled) sa zamerne NEVYPINA.
+Vypnuty sposoboval, ze spojenie na DGW branu zlyhavalo (INTERNAL_ERROR) ~49x za minutu
+v slucke a dalsie MNSHTTPClient ulohy (sync, zalohy) padali. Namerane 24. 10. 2026:
+s vypnutym DGW QUIC 49 chyb/min, bez toho patchu 0. DGW si pri nedostupnom UDP poradi sam.
 
 Idempotentne. Pouzitie: no_quic.py <work/decoded>
 """
@@ -20,8 +23,6 @@ MARK = "# messengerslim: no-quic"
 
 QS = "com/facebook/proxygen/QuicSettings$Builder.smali"
 QS_T = "Lcom/facebook/proxygen/QuicSettings$Builder;"
-DGW = "com/facebook/distribgw/client/mns/MNSDGWNetworkStackConfig.smali"
-DGW_T = "Lcom/facebook/distribgw/client/mns/MNSDGWNetworkStackConfig;"
 
 ROOT_SEG = re.compile(r"^(smali|smali_classes\d+|classes\d*)$")
 
@@ -55,24 +56,10 @@ def patch_quic_settings(text: str) -> str:
     return new
 
 
-def patch_dgw(text: str) -> str:
-    # hlavny konstruktor (ten, ktory zapisuje quicEnabled) -> pred jeho return-void
-    rx = re.compile(r"(\.method public constructor <init>\([^)]*\)V\n(?:(?!\.end method).*\n)*?"
-                    rf"    iput-boolean \w+, p0, {re.escape(DGW_T)}->quicEnabled:Z\n"
-                    r"(?:(?!\.end method).*\n)*?)(    return-void\n\.end method)")
-    body = (f"    {MARK}\n"
-            "    const/4 v0, 0x0\n\n"
-            f"    iput-boolean v0, p0, {DGW_T}->quicEnabled:Z\n\n")
-    new, n = rx.subn(lambda m: m.group(1) + body + m.group(2), text, count=1)
-    if n != 1:
-        raise RuntimeError("MNSDGWNetworkStackConfig.<init>: quicEnabled sa nenaslo")
-    return new
-
-
 def main(workdir: str) -> int:
     base = Path(workdir).resolve()
     done = 0
-    for rel, fn in ((QS, patch_quic_settings), (DGW, patch_dgw)):
+    for rel, fn in ((QS, patch_quic_settings),):
         files = find(base, rel)
         if not files:
             print(f"  chyba: {rel} (ina verzia Messengera?)")

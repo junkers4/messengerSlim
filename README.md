@@ -34,7 +34,7 @@ Cieľové zariadenie: Pixel 9a, Android 16, arm64. Posledný overený Messenger:
   tunel a proces sa ukončí. Žiadne budenie na pozadí (preto **žiadne notifikácie** — zámer).
 - Chat-only: vypnuté Stories, Reels, Marketplace, Meta AI, reklamy, analytika a pozadové
   služby. Hovory, emoji, GIFy a fotky ostávajú.
-- QUIC (UDP) je vypnutý, lebo Tor UDP neprenesie. Všetko ide hneď cez TCP.
+- QUIC (UDP) je vypnutý v proxygen klientovi (fotky, videá, GIFy), lebo Tor UDP neprenesie; ide hneď cez TCP. V DGW bráne sa QUIC **nevypína** (vypnutie spôsobovalo ~49 chýb/min, pozri `patches/no_quic.py`).
 
 **Vzhľad a panel v inboxe**
 
@@ -240,7 +240,7 @@ Patche sú písané tak, aby prežili zmenu verzie, ale obfuskácia sa mení. Po
   za „nič sa nebudí na pozadí“.
 - Kontakty sa nesynchronizujú (sync adaptér a authenticator sú vypnuté).
 - Facebook blokuje niektoré Tor exit uzly (login, captcha). Pomáha nový okruh alebo počkať.
-- **Nálepky (stickers)** sa nenačítajú (karta ostáva na prázdnych štvorcoch). GIFy a emoji
+- **Nálepky (stickers)** sa nenačítajú (karta ostáva na prázdnych štvorcoch, v logu bez chyby). GIFy a emoji
   idú. Príčina nie je potvrdená.
 - Ak sa bootstrap Toru nechytí do 90 s, brána ponúkne opakovanie; sieť je dovtedy zavretá.
 - Funguje len na **arm64**.
