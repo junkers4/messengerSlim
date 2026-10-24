@@ -44,6 +44,7 @@ Build: originálne APK → `tor-inject/build-all.sh` (lokálne aj GitHub Actions
 | X4 | **Meniny ľudí zo zoznamu**: meno sa hľadá v SK, inak CZ kalendári („Miška (Michaela)“ → CZ 19. 10.); do 7 dní „🌸 meniny o N dni Miška“. | `WeatherPanel.namedayOf`, `Birthdays.line` |
 | X5 | **Upratený inbox**: bez pásu „Notifications are currently off“ (vypnuté zámerne) a bez plávajúceho tlačidla Meta AI. | `Declutter` |
 | X6 | Panel má miesto na **5 riadkov**: počasie+🧅, detail, dátum, info (narodeniny > sviatok > zajtra meniny), správy. | `WeatherPanel.build` |
+| X7 | Nadpis inboxu „messenger“ → **„spravaren“** (prekreslený rovnako veľko, farba podľa tmavého/svetlého režimu). | `Declutter.Wordmark` |
 
 ### Rýchlosť písania a načítania
 
