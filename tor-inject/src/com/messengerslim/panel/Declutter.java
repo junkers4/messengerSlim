@@ -15,7 +15,7 @@ import java.util.ArrayList;
 
 /**
  * Uprace inbox: skryje pas "Notifications are currently off" (notifikacie su vypnute zamerne,
- * R4), plavajuce tlacidlo Meta AI a pole "Ask Meta AI or search"; nadpis "messenger" prekresli na "spravaren". Bezi len par krat po vlozeni panelu - ziadny periodicky
+ * R4), plavajuce tlacidlo Meta AI; pole "Ask Meta AI or search" prekryje pilulkou "Hľadať"; nadpis "messenger" prekresli na "spravaren". Bezi len par krat po vlozeni panelu - ziadny periodicky
  * sken hierarchie (R8).
  */
 final class Declutter {
@@ -53,7 +53,11 @@ final class Declutter {
             found.clear();
             root.findViewsWithText(found, "Ask Meta AI", View.FIND_VIEWS_WITH_CONTENT_DESCRIPTION);
             for (View v : found) {
-                if (String.valueOf(v.getContentDescription()).startsWith("Ask Meta AI")) v.setVisibility(View.GONE);
+                // Litho si viditelnost vracia -> radsej preklad cez foreground; tuk dalej otvori hladanie
+                if (String.valueOf(v.getContentDescription()).startsWith("Ask Meta AI")
+                        && !(v.getForeground() instanceof SearchCover)) {
+                    v.setForeground(new SearchCover(night(v), v.getResources().getDisplayMetrics().density));
+                }
             }
             found.clear();
             root.findViewsWithText(found, "Messenger", View.FIND_VIEWS_WITH_CONTENT_DESCRIPTION);
@@ -74,6 +78,30 @@ final class Declutter {
     private static boolean night(View v) {
         return (v.getResources().getConfiguration().uiMode & Configuration.UI_MODE_NIGHT_MASK)
                 == Configuration.UI_MODE_NIGHT_YES;
+    }
+
+    /** Prekryje pole "Ask Meta AI or search" rovnakou pilulkou s textom "Hľadať". */
+    static final class SearchCover extends Drawable {
+        private final Paint bg = new Paint(Paint.ANTI_ALIAS_FLAG), fg = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final float d;
+
+        SearchCover(boolean night, float density) {
+            d = density;
+            bg.setColor(night ? 0xFF333334 : 0xFFF0F2F5);
+            fg.setColor(night ? 0xFFB0B3B8 : 0xFF65676B);
+        }
+
+        @Override public void draw(Canvas c) {
+            Rect b = getBounds();
+            c.drawRoundRect(b.left, b.top, b.right, b.bottom, b.height() / 2f, b.height() / 2f, bg);
+            fg.setTextSize(b.height() * 0.36f);
+            Paint.FontMetrics fm = fg.getFontMetrics();
+            c.drawText("🔍  Hľadať", b.left + 20 * d, b.centerY() - (fm.ascent + fm.descent) / 2f, fg);
+        }
+
+        @Override public void setAlpha(int a) {}
+        @Override public void setColorFilter(ColorFilter cf) {}
+        @Override public int getOpacity() { return PixelFormat.TRANSLUCENT; }
     }
 
     /** Zakryje Messengerov nadpis farbou pozadia a napise "spravaren" rovnako velko. */
