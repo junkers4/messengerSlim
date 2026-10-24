@@ -8,6 +8,7 @@ import android.graphics.PixelFormat;
 import android.graphics.Rect;
 import android.graphics.Typeface;
 import android.graphics.drawable.Drawable;
+import android.util.Log;
 import android.view.View;
 import android.view.ViewGroup;
 
@@ -22,6 +23,8 @@ final class Declutter {
 
     /** id_0x7f0b0d04: TextView pasu "Notifications are currently off. Tap to turn on." (584) */
     private static final int NOTIF_BANNER_ID = 0x7f0b0d04;
+    /** kluc view tagu (musi mat package id 0x7f) - uz prekryte */
+    private static final int COVER_TAG = 0x7f0fffee;
     private static final long[] AT_MS = { 0, 1500, 4000, 9000 };
 
     private Declutter() {}
@@ -62,8 +65,16 @@ final class Declutter {
             // pilulka je kreslena Lithom bez View s popisom -> hladame hostitela podla polohy a
             // velkosti: sirka ~cela, vyska 3-7 % obrazovky, hned pod nadpisom (10-18 % vysky)
             View host = findSearchHost(root, root.getWidth(), root.getHeight(), 0);
-            if (host != null && !(host.getForeground() instanceof SearchCover)) {
-                host.setForeground(new SearchCover(night(host), host.getResources().getDisplayMetrics().density));
+            if (host != null && host.getTag(COVER_TAG) == null) {
+                // ViewOverlay: Litho foreground view-om cisti, overlay nie; hybe sa s polozkou pri scrolle
+                SearchCover cover = new SearchCover(night(host), host.getResources().getDisplayMetrics().density);
+                cover.setBounds(0, 0, host.getWidth(), host.getHeight());
+                host.getOverlay().add(cover);
+                host.setTag(COVER_TAG, Boolean.TRUE);
+                Log.i("OrcaTor", "Declutter: pole hladania prekryte (" + host.getClass().getName()
+                        + " " + host.getWidth() + "x" + host.getHeight() + ")");
+            } else if (host == null) {
+                Log.i("OrcaTor", "Declutter: pole hladania nenajdene");
             }
             found.clear();
             root.findViewsWithText(found, "Messenger", View.FIND_VIEWS_WITH_CONTENT_DESCRIPTION);
