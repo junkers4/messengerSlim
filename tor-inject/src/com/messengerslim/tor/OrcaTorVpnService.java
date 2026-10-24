@@ -47,6 +47,9 @@ public class OrcaTorVpnService extends VpnService {
 
     public static volatile boolean READY = false;
 
+    /** Server, cez ktory Messenger posiela a prijima spravy (MQTT). */
+    private static final String WARMUP_HOST = "edge-mqtt.facebook.com";
+
     /** Ak sa bootstrap do tohto casu nechyti, docasne otvor siet, nech Tor dobehne. */
     private static final long STALL_OPEN_MS = 15_000;
 
@@ -150,7 +153,8 @@ public class OrcaTorVpnService extends VpnService {
             long stallAt  = System.currentTimeMillis() + STALL_OPEN_MS;
             boolean opened = false;
             while (!tor.bootstrapped) {
-                status(String.valueOf(Math.min(99, tor.bootstrapPercent)));
+                // OPEN: TorGate zakryje appku, kym siet ide mimo tunela
+                status(opened ? TorStatus.OPEN : String.valueOf(Math.min(99, tor.bootstrapPercent)));
                 if (tor.died) { Log.e(TAG, "Tor spadol pocas bootstrapu -> ostava blackhole"); blackhole(); return; }
                 if (System.currentTimeMillis() > deadline) { Log.e(TAG, "Bootstrap timeout -> ostava blackhole"); blackhole(); return; }
                 if (!opened) {
@@ -190,6 +194,7 @@ public class OrcaTorVpnService extends VpnService {
             status(TorStatus.READY);
             Log.i(TAG, "Messenger je teraz smerovany cez Tor.");
             startWatchdog();
+            startWarmUp();
         } catch (Throwable t) {
             Log.e(TAG, "start zlyhal", t);
             blackhole();
@@ -259,6 +264,29 @@ public class OrcaTorVpnService extends VpnService {
         w.setDaemon(true); w.start();
     }
 
+    /**
+     * Hned po READY otvor cez Tor spojenie na MQTT server Messengera. Tor tym postavi okruh
+     * k exitu, ktory Facebook naozaj dosiahne, a Messengerove spojenie sa na neho len prilepi.
+     * Ked exit zlyha (zly DNS, zablokovany Facebook), vyziadaj novy okruh hned - inak by sa
+     * Messenger na nom zasekol a cakal na vlastny timeout.
+     */
+    private void startWarmUp() {
+        final TorController t = tor;
+        Thread w = new Thread(() -> {
+            for (int i = 0; i < 3 && running; i++) {
+                long t0 = System.currentTimeMillis();
+                if (t.probe(WARMUP_HOST, 443, 25_000)) {
+                    Log.i(TAG, "Okruh k Facebooku pripraveny za " + (System.currentTimeMillis() - t0) + " ms");
+                    return;
+                }
+                Log.w(TAG, "Exit nedosiahol Facebook -> novy okruh");
+                t.newCircuits();
+                try { Thread.sleep(1000); } catch (InterruptedException e) { return; }
+            }
+        }, "tor-warmup");
+        w.setDaemon(true); w.start();
+    }
+
     /** Postavi tun pre Messenger. guards==null/prazdne => vsetky trasy (blackhole ked bez hev). */
     private ParcelFileDescriptor buildTun(List<Long> guards) {
         Builder b = new Builder();
@@ -285,7 +313,9 @@ public class OrcaTorVpnService extends VpnService {
             "socks5:\n  port: " + SOCKS + "\n  address: 127.0.0.1\n  udp: 'udp'\n" +
             "mapdns:\n  address: " + MAPDNS + "\n  port: 53\n  network: 100.64.0.0\n" +
             "  netmask: 255.192.0.0\n  cache-size: 10000\n" +
-            "misc:\n  log-file: stderr\n  log-level: warn\n";
+            // connect cez Tor (okruh + exit) bezne trva 3-15 s; hev default 10 s spojenie
+            // zrusil skor, nez Tor stihol skusit dalsi exit -> odoslanie sa zaseklo
+            "misc:\n  connect-timeout: 30000\n  log-file: stderr\n  log-level: warn\n";
         try (OutputStream os = new FileOutputStream(f)) { os.write(y.getBytes(StandardCharsets.UTF_8)); }
         return f;
     }

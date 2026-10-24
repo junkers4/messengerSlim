@@ -11,12 +11,14 @@ import java.nio.charset.StandardCharsets;
  * Stav Tor bootstrapu zdielany medzi procesmi. VpnService bezi vo vlastnom procese (:tor),
  * UI v hlavnom - staticke pole je preto na nic. Subor v filesDir vidia obe (rovnake UID).
  *
- * Obsah: "READY", "DOWN" alebo percenta bootstrapu ("0".."99").
+ * Obsah: "READY", "DOWN", "OPEN" (siet docasne otvorena, nech Tor dobehne) alebo percenta
+ * bootstrapu ("0".."99").
  */
 public final class TorStatus {
 
     public static final String READY = "READY";
     public static final String DOWN = "DOWN";
+    public static final String OPEN = "OPEN";
 
     private TorStatus() {}
 

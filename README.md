@@ -73,7 +73,7 @@ So not a single packet escapes Tor at startup:
 ## Battery — Tor runs only when needed
 
 `LifecycleWatcher` turns Tor on only while Messenger is in the **foreground** and off
-about 25 s after it goes to the **background** (the delay avoids a needless Tor restart
+about 3 minutes after it goes to the **background** (the delay avoids a needless Tor restart
 when you briefly switch apps). Open Messenger, Tor starts; close it, Tor stops and the VPN
 key disappears from the status bar.
 
@@ -102,7 +102,27 @@ Trade-off: because Tor stops on close, messages arrive only once you open Messen
 [hev-socks5-tunnel](https://github.com/heiher/hev-socks5-tunnel)).
 
 
-## Build (Linux, arm64-v8a)
+## Build — one command (Linux or GitHub Actions)
+
+[`tor-inject/build-all.sh`](tor-inject/build-all.sh) builds the whole app from the
+**original** Messenger APK: verifies Facebook's signature, applies the chat-only cuts
+(`scripts/py/nuclear_chatonly.py`), turns QUIC off (`scripts/py/no_quic.py`), injects Tor,
+compiles `libhev-socks5-tunnel.so` with the NDK, downloads a pinned Tor expert bundle and
+APKEditor (SHA-256 checked), then builds, aligns and signs.
+
+```bash
+IN_APK=messenger.apk KEYSTORE=spravaren.keystore KS_PASS=... \
+ANDROID_HOME=~/Android/Sdk ANDROID_NDK=~/Android/Sdk/ndk/27.2.12479018 \
+bash tor-inject/build-all.sh          # -> tor-inject/spravaren-signed.apk
+```
+
+**GitHub Actions:** add secrets `SIGNING_KEYSTORE_B64` (`base64 -w0 spravaren.keystore`),
+`SIGNING_KEYSTORE_PASS` (and optionally `SIGNING_KEY_ALIAS`), then *Actions → Build
+Spravaren APK → Run workflow* with a direct link to the original APK. The signed APK is
+the run's artifact (kept 1 day). In a public repository anyone signed in to GitHub can
+download that artifact.
+
+## Build (manual, older path)
 
 See [`tor-inject/build.sh`](tor-inject/build.sh). Needs JDK 17, Android SDK (build-tools +
 platform-35), NDK, [APKEditor](https://github.com/REAndroid/APKEditor):

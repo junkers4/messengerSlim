@@ -32,3 +32,6 @@ logs/*.log
 # conversation exports (contain private data) - never commit
 /20??-*-mozes-moj-*.txt
 /20??-*.txt
+
+# python cache
+__pycache__/
