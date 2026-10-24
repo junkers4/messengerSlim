@@ -89,10 +89,10 @@ echo "== 2) APKEditor decode (smali) =="
 java -jar "$APKEDITOR" d -i "$IN_APK" -o "$WORK/decoded"
 
 echo "== 3) chat-only rezy + QUIC off + branding + panel =="
-python3 "$REPO/scripts/py/nuclear_chatonly.py" "$WORK/decoded" --report "$WORK/cuts.txt"
-python3 "$REPO/scripts/py/no_quic.py" "$WORK/decoded"
-python3 "$REPO/scripts/py/branding.py" "$WORK/decoded"
-python3 "$REPO/scripts/py/panel_hook.py" "$WORK/decoded"
+python3 "$REPO/patches/nuclear_chatonly.py" "$WORK/decoded" --report "$WORK/cuts.txt"
+python3 "$REPO/patches/no_quic.py" "$WORK/decoded"
+python3 "$REPO/patches/branding.py" "$WORK/decoded"
+python3 "$REPO/patches/panel_hook.py" "$WORK/decoded"
 
 echo "== 4) manifest: Tor komponenty + bez budenia na pozadi =="
 python3 - "$WORK/decoded/AndroidManifest.xml" "$HERE/manifest-inject.xml" <<'PY'
@@ -106,7 +106,7 @@ assert s.count("</application>") == 1
 open(mf, "w", encoding="utf-8").write(s.replace("</application>", inj + "\n  </application>", 1))
 print("manifest injected")
 PY
-python3 "$REPO/scripts/py/no_background_manifest.py" "$WORK/decoded/AndroidManifest.xml"
+python3 "$REPO/patches/no_background_manifest.py" "$WORK/decoded/AndroidManifest.xml"
 
 echo "== 5) nas Java kod -> dalsi volny smali/classesN =="
 mkdir -p "$WORK/cls" "$WORK/dex"

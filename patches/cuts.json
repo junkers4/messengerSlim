@@ -1,0 +1,510 @@
+{
+ "_doc": "Zoznamy pre patches/nuclear_chatonly.py (chat-only rezy). Povodne v PowerShell skripte, prevedene 1:1.",
+ "uiTargets": [
+  "smali_classes5/com/facebook/stickers/store/StickerStoreActivity.smali",
+  "smali_classes6/com/facebook/messaging/reels/unreadsettings/UnreadReelsSettingsActivity.smali",
+  "smali_classes7/com/facebook/messaging/marketplace/meetingplan/MeetingPlanActivity.smali",
+  "smali_classes7/com/facebook/messaging/marketplace/viewlisting/ThreadNotificationViewListingActivity.smali",
+  "smali_classes7/com/facebook/messaging/montage/prefs/MontagePreferenceActivity.smali",
+  "smali_classes8/com/facebook/messaging/wellbeing/unknowncontact/messagerequests/threadlist/MessageRequestsActivity.smali",
+  "smali_classes11/com/facebook/messaging/montage/audience/picker/MontageAudiencePickerActivity.smali",
+  "smali_classes4/com/facebook/messaging/montage/composer/MontageComposerActivity.smali",
+  "smali_classes7/com/facebook/messaging/business/common/activity/BusinessActivity.smali",
+  "smali_classes7/com/facebook/messaging/montage/prefs/MontageAudiencePreferenceActivity.smali",
+  "smali_classes8/com/facebook/messaging/history/HistoryActivity.smali",
+  "smali_classes8/com/facebook/messaging/montage/blocking/MontageHiddenUsersActivity.smali",
+  "smali_classes8/com/facebook/messaging/montage/viewer/MontageViewerActivity.smali",
+  "smali_classes8/com/facebook/messaging/montage/viewer/MontageViewerBubblesActivity.smali",
+  "smali_classes8/com/facebook/messaging/search/messages/MessageSearchActivity.smali",
+  "smali_classes9/com/facebook/messaging/montage/list/MontageListActivity.smali",
+  "smali_classes9/com/facebook/messaging/montage/viewer/StoryPreviewPopupActivity.smali",
+  "smali_classes7/com/facebook/messaging/avatar/socialstickers/ui/settings/AvatarUsabilitySettingActivity.smali",
+  "smali_classes8/com/facebook/messaging/about/MessengerAboutLicenseActivity.smali",
+  "smali_classes7/com/facebook/messaging/memories/viewer/activity/MemoryViewerActivity.smali",
+  "smali_classes8/com/facebook/messaging/attribution/ChatHeadsReplyFlowHandlerActivity.smali",
+  "smali_classes7/com/facebook/messaging/users/username/EditUsernameActivity.smali",
+  "smali_classes8/com/facebook/messaging/users/displayname/ChangeDisplayNameSettingsActivity.smali",
+  "smali_classes9/com/facebook/nativetemplates/fb/shell/messenger/NativeTemplatesMessengerActivity.smali",
+  "smali_classes7/com/facebook/messaging/accountswitch/switchoneclick/SwitchOneClickActivity.smali",
+  "smali_classes10/com/facebook/messaging/accountswitch/SwitchAccountActivity.smali",
+  "smali_classes10/com/facebook/messaging/accountswitch/silent/SwitchAccountsSilentActivity.smali",
+  "smali_classes8/com/facebook/quickpromotion/debug/QuickPromotionSettingsActivity.smali",
+  "smali_classes4/com/facebook/quickpromotion/debug/QuickPromotionFiltersActivity.smali",
+  "smali_classes8/com/facebook/quickpromotion/debug/QuickPromotionTriggersActivity.smali",
+  "smali_classes8/com/facebook/quickpromotion/debug/SeguePreviewSettingsActivity.smali",
+  "smali_classes8/com/facebook/debug/perfoverlay/PerfOverlaySettingsActivity.smali",
+  "smali_classes8/com/facebook/debug/saddataoverlay/SadDataOverlaySettingsActivity.smali",
+  "smali_classes10/com/facebook/messaging/internalprefs/fxpf/FXPFDebugActivity.smali",
+  "smali_classes7/com/facebook/messaging/internalprefs/presence/MessengerInternalPresenceDebugActivity.smali",
+  "smali_classes8/com/facebook/messaging/internalprefs/MessengerInternalBasePreferenceActivity.smali",
+  "smali_classes8/com/facebook/messaging/internalprefs/burner/MessengerInternalBurnerActivity.smali",
+  "smali_classes8/com/facebook/messaging/internalprefs/burner/MessengerInternalBurnerBulkReceiveActivity.smali",
+  "smali_classes8/com/facebook/messaging/internalprefs/burner/MessengerInternalBurnerBulkSendActivity.smali",
+  "smali_classes8/com/facebook/messaging/internalprefs/burner/MessengerInternalBurnerHistoryFlowActivity.smali",
+  "smali_classes8/com/facebook/messaging/internalprefs/omnistore/preference/MessengerInternalOmnistoreCollectionInfoActivity.smali",
+  "smali_classes8/com/facebook/payments/p2p/messenger/core/prefs/PaymentsPreferenceActivity.smali",
+  "smali_classes8/com/facebook/payments/p2p/messenger/core/prefs/transactions/MessengerPayHistoryActivity.smali",
+  "smali_classes8/com/facebook/payments/p2p/awareness/PaymentAwarenessActivity.smali",
+  "smali_classes8/com/facebook/payments/p2p/messenger/core/prefs/method/verification/PaymentMethodVerificationHostActivity.smali",
+  "smali_classes8/com/facebook/payments/picker/PickerScreenActivity.smali",
+  "smali_classes8/com/facebook/payments/shipping/form/ShippingAddressActivity.smali",
+  "smali_classes8/com/facebook/payments/paymentmethods/cardform/CardFormActivity.smali",
+  "smali_classes10/com/facebook/messaging/settings/surface/MessengerSettingActivity.smali",
+  "smali_classes7/com/facebook/messaging/settings/mesettings/surface/MessengerMePreferenceActivity.smali",
+  "smali_classes7/com/facebook/messaging/threadsettings2/activity/ThreadSettingsActivity.smali",
+  "smali_classes9/com/facebook/messaging/graph/contactmanagement/AllContactsActivity.smali",
+  "smali_classes9/com/facebook/fbavatar/FbAvatarEditorBaseActivity.smali",
+  "smali_classes10/com/facebook/messaging/business/plugins/suggestedreply/settings/mesettings/SuggestedReplySettingsActivity.smali",
+  "smali_classes10/com/facebook/messaging/earlyaccess/settingsui/EarlyAccessSettingActivity.smali",
+  "smali_classes10/com/facebook/messaging/encryptedbackups/setting/infiniteretroactivebackups/activity/EbIrbSettingsActivity.smali",
+  "smali_classes10/com/facebook/messaging/wellbeing/unknowncontact/reachabilitycontrols/activity/ReachabilitySettingsActivity.smali",
+  "smali_classes6/com/facebook/messaging/accessibility/settingsurface/AccessibilitySettingActivity.smali",
+  "smali_classes6/com/facebook/messaging/accessibility/settingsurface/ColorFilterSettingActivity.smali",
+  "smali_classes6/com/facebook/messaging/accessibility/settingsurface/motionreduction/MotionReductionSettingActivity.smali",
+  "smali_classes6/com/facebook/messaging/composer/keyboardsettings/MessengerKeyboardPreferenceActivity.smali",
+  "smali_classes6/com/facebook/messaging/encryptedbackups/infiniteretroactivebackups/setup/upsell/activity/StorageSettingsEbUpsellActivity.smali",
+  "smali_classes6/com/facebook/messaging/memories/appsettingsui/MemoriesAppSettingsActivity.smali",
+  "smali_classes6/com/facebook/messaging/privacycheckup/privacycheckupsetting/PrivacyCheckupSettingsActivity.smali",
+  "smali_classes7/com/facebook/messaging/business/ads/orderhistory/ui/InboxOrderHistorySettingActivity.smali",
+  "smali_classes7/com/facebook/messaging/business/bizrtc/pagertcsettings/PageAudioAndVideoCallsSettingActivity.smali",
+  "smali_classes7/com/facebook/messaging/dma/ui/MsplitConsentSettingsActivity.smali",
+  "smali_classes7/com/facebook/messaging/invites/settingsurface/InviteFriendSettingActivity.smali",
+  "smali_classes7/com/facebook/messaging/professionalmode/businesstools/settings/ProModeBusinessToolsSettingsActivity.smali",
+  "smali_classes7/com/facebook/messaging/wellbeing/safetyecosystem/authenticinteractions/ondevicesafetydetection/activity/SafetyDetectionSettingsActivity.smali",
+  "smali_classes8/com/facebook/messaging/lid/appsettingsui/LanguageIdentificationSettingsActivity.smali",
+  "smali_classes8/com/facebook/messaging/nativepagereply/faq/mesettings/BusinessInboxFAQSettingActivity.smali",
+  "smali_classes8/com/facebook/messaging/search/edithistory/M3SearchEditHistoryActivity.smali",
+  "smali_classes8/com/facebook/zero/zerobalance/ui/AutoflexSettingsActivity.smali",
+  "smali_classes9/com/facebook/offlineexperiment/internalsettings/OfflineExperimentPreferenceActivity.smali",
+  "smali_classes8/com/facebook/messenger/intents/ShareIntentHandler.smali",
+  "smali_classes8/com/facebook/messenger/intents/MediaEditShareIntentHandler.smali",
+  "smali_classes8/com/facebook/messaging/sharing/ShareLauncherActivity.smali",
+  "smali_classes7/com/facebook/messaging/threadview/iconpicker/ThreadIconPickerActivity.smali",
+  "smali_classes9/com/facebook/messaging/camerautil/CropImage.smali",
+  "smali_classes7/com/facebook/ipc/composer/launch/ComposerLaunchActivity.smali",
+  "smali_classes8/com/facebook/platform/common/activity/PlatformWrapperActivity.smali",
+  "smali_classes3/com/facebook/messenger/intents/FamilyIntentHandlerActivity.smali",
+  "smali_classes3/com/facebook/messenger/intents/SameTaskIntentHandlerActivity.smali",
+  "smali_classes3/com/facebook/messenger/intents/SecureSameTaskIntentHandlerActivity.smali",
+  "smali_classes3/com/facebook/messenger/intents/SecureIntentHandlerActivity.smali",
+  "smali_classes3/com/facebook/messenger/intents/IntentHandlerActivity.smali",
+  "smali_classes6/com/facebook/messaging/aibot/launcher/activity/AiStudioFragmentActivity.smali",
+  "smali_classes6/com/facebook/messaging/aibot/launcher/activity/AiBotImmersiveThreadActivity.smali",
+  "smali_classes6/com/facebook/xapp/messaging/composer/aibot/discover/activity/AiBotDiscoverActivity.smali",
+  "smali_classes6/com/facebook/messaging/aibot/memory/activity/ManageAiMemorySettingsActivity.smali",
+  "smali_classes6/com/facebook/messaging/aibot/launcher/activity/AiStudioCreationFragmentActivity.smali",
+  "smali_classes6/com/facebook/messaging/aibot/launcher/activity/AiStudioProfileActivity.smali",
+  "smali_classes6/com/facebook/messaging/aibot/launcher/activity/AiStudioCharacterProfileCreationActivity.smali",
+  "smali_classes6/com/facebook/messaging/aibot/launcher/activity/AiStudioImmersiveThreadFirstBloksActivity.smali",
+  "smali_classes6/com/facebook/messaging/aibot/appsettingsui/MetaAiLookupSettingsActivity.smali",
+  "smali_classes6/com/facebook/messaging/aibot/botpicker/ugcbot/inthreadaibotediting/InThreadAiBotEditingActivity.smali",
+  "smali_classes6/com/facebook/messaging/aibot/rpg/ScenesRPGIntroActivity.smali"
+ ],
+ "batteryRules": [
+  {
+   "path": "smali/com/facebook/fdidlite/FDIDSyncLiteReceiver.smali",
+   "header": ".method public A05(Landroid/content/Context;Landroid/content/Intent;LX/0NL;)V",
+   "replacement": ".method public A05(Landroid/content/Context;Landroid/content/Intent;LX/0NL;)V\n    .locals 0\n\n    return-void\n.end method"
+  },
+  {
+   "path": "smali_classes4/com/facebook/messaging/chatheads/service/ChatHeadsServiceBroadcastReceiver.smali",
+   "header": ".method public A05(Landroid/content/Context;Landroid/content/Intent;LX/0NL;)V",
+   "replacement": ".method public A05(Landroid/content/Context;Landroid/content/Intent;LX/0NL;)V\n    .locals 0\n\n    return-void\n.end method"
+  },
+  {
+   "path": "smali/com/facebook/messenger/app/background/MessengerBackgroundWakeupReceiver.smali",
+   "header": ".method public A05(Landroid/content/Context;Landroid/content/Intent;LX/0NL;)V",
+   "replacement": ".method public A05(Landroid/content/Context;Landroid/content/Intent;LX/0NL;)V\n    .locals 0\n\n    return-void\n.end method"
+  },
+  {
+   "path": "smali_classes10/com/facebook/bugreporter/core/scheduler/AlarmsBroadcastReceiver.smali",
+   "header": ".method public A05(Landroid/content/Context;Landroid/content/Intent;LX/0NL;)V",
+   "replacement": ".method public A05(Landroid/content/Context;Landroid/content/Intent;LX/0NL;)V\n    .locals 0\n\n    return-void\n.end method"
+  },
+  {
+   "path": "smali_classes12/com/facebook/analytics2/fabric/onefabric/OneFabricUploadAlarmReceiver.smali",
+   "header": ".method public A05(Landroid/content/Context;Landroid/content/Intent;LX/0NL;)V",
+   "replacement": ".method public A05(Landroid/content/Context;Landroid/content/Intent;LX/0NL;)V\n    .locals 0\n\n    return-void\n.end method"
+  },
+  {
+   "path": "smali_classes7/com/facebook/messaging/messengerprefs/notif/NoteNotificationBroadcastReceiver.smali",
+   "header": ".method public A05(Landroid/content/Context;Landroid/content/Intent;LX/0NL;)V",
+   "replacement": ".method public A05(Landroid/content/Context;Landroid/content/Intent;LX/0NL;)V\n    .locals 0\n\n    return-void\n.end method"
+  },
+  {
+   "path": "smali_classes7/com/facebook/messaging/notify/plugins/handler/messagereminder/MessageNotificationSurveyReceiver.smali",
+   "header": ".method public A05(Landroid/content/Context;Landroid/content/Intent;LX/0NL;)V",
+   "replacement": ".method public A05(Landroid/content/Context;Landroid/content/Intent;LX/0NL;)V\n    .locals 0\n\n    return-void\n.end method"
+  },
+  {
+   "path": "smali_classes8/com/facebook/messaging/notify/client/MessagesNotificationBroadcastReceiver.smali",
+   "header": ".method public A05(Landroid/content/Context;Landroid/content/Intent;LX/0NL;)V",
+   "replacement": ".method public A05(Landroid/content/Context;Landroid/content/Intent;LX/0NL;)V\n    .locals 0\n\n    return-void\n.end method"
+  },
+  {
+   "path": "smali_classes4/com/facebook/push/registration/RegistrarHelperReceiver.smali",
+   "header": ".method public A05(Landroid/content/Context;Landroid/content/Intent;LX/0NL;)V",
+   "replacement": ".method public A05(Landroid/content/Context;Landroid/content/Intent;LX/0NL;)V\n    .locals 0\n\n    return-void\n.end method"
+  },
+  {
+   "path": "smali_classes8/com/facebook/push/nna/NNABroadcastReceiver.smali",
+   "header": ".method public A05(Landroid/content/Context;Landroid/content/Intent;LX/0NL;)V",
+   "replacement": ".method public A05(Landroid/content/Context;Landroid/content/Intent;LX/0NL;)V\n    .locals 0\n\n    return-void\n.end method"
+  },
+  {
+   "path": "smali_classes4/com/facebook/messaging/notify/logging/MessagesSystemTrayLogService.smali",
+   "header": ".method public A03(Landroid/content/Intent;)V",
+   "replacement": ".method public A03(Landroid/content/Intent;)V\n    .locals 0\n\n    return-void\n.end method"
+  },
+  {
+   "path": "smali_classes4/com/facebook/messengercar/CarNotificationService.smali",
+   "header": ".method public A03(Landroid/content/Intent;)V",
+   "replacement": ".method public A03(Landroid/content/Intent;)V\n    .locals 0\n\n    return-void\n.end method"
+  },
+  {
+   "path": "smali_classes7/com/facebook/messaging/notify/service/MessengerDirectReplyService.smali",
+   "header": ".method public A03(Landroid/content/Intent;)V",
+   "replacement": ".method public A03(Landroid/content/Intent;)V\n    .locals 0\n\n    return-void\n.end method"
+  },
+  {
+   "path": "smali_classes7/com/facebook/messaging/notify/service/MessengerLikeService.smali",
+   "header": ".method public A03(Landroid/content/Intent;)V",
+   "replacement": ".method public A03(Landroid/content/Intent;)V\n    .locals 0\n\n    return-void\n.end method"
+  },
+  {
+   "path": "smali_classes7/com/facebook/account/twofac/protocol/LoginApprovalNotificationService.smali",
+   "header": ".method public A03(Landroid/content/Intent;)V",
+   "replacement": ".method public A03(Landroid/content/Intent;)V\n    .locals 0\n\n    return-void\n.end method"
+  },
+  {
+   "path": "smali_classes7/com/facebook/messaging/directshare/DirectShareChooserTargetService.smali",
+   "header": ".method public onGetChooserTargets(Landroid/content/ComponentName;Landroid/content/IntentFilter;)Ljava/util/List;",
+   "replacement": ".method public onGetChooserTargets(Landroid/content/ComponentName;Landroid/content/IntentFilter;)Ljava/util/List;\n    .locals 1\n\n    invoke-static {}, Ljava/util/Collections;->emptyList()Ljava/util/List;\n\n    move-result-object v0\n\n    return-object v0\n.end method"
+  },
+  {
+   "path": "smali_classes10/androidx/sharetarget/ChooserTargetServiceCompat.smali",
+   "header": ".method public onGetChooserTargets(Landroid/content/ComponentName;Landroid/content/IntentFilter;)Ljava/util/List;",
+   "replacement": ".method public onGetChooserTargets(Landroid/content/ComponentName;Landroid/content/IntentFilter;)Ljava/util/List;\n    .locals 1\n\n    invoke-static {}, Ljava/util/Collections;->emptyList()Ljava/util/List;\n\n    move-result-object v0\n\n    return-object v0\n.end method"
+  },
+  {
+   "path": "smali/com/facebook/mqttlite/MqttService.smali",
+   "header": ".method public onStartCommand(Landroid/content/Intent;II)I",
+   "replacement": ".method public onStartCommand(Landroid/content/Intent;II)I\n    .locals 1\n\n    const/4 v0, 0x2\n\n    return v0\n.end method"
+  },
+  {
+   "path": "smali/com/facebook/push/fbnslite/PushSdkFbnsReceiverService.smali",
+   "header": ".method public onStartCommand(Landroid/content/Intent;II)I",
+   "replacement": ".method public onStartCommand(Landroid/content/Intent;II)I\n    .locals 1\n\n    const/4 v0, 0x2\n\n    return v0\n.end method"
+  },
+  {
+   "path": "smali_classes10/androidx/work/impl/background/systemalarm/SystemAlarmService.smali",
+   "header": ".method public onStartCommand(Landroid/content/Intent;II)I",
+   "replacement": ".method public onStartCommand(Landroid/content/Intent;II)I\n    .locals 1\n\n    const/4 v0, 0x2\n\n    return v0\n.end method"
+  },
+  {
+   "path": "smali_classes10/com/facebook/analytics2/logger/GooglePlayUploadService.smali",
+   "header": ".method public onStartCommand(Landroid/content/Intent;II)I",
+   "replacement": ".method public onStartCommand(Landroid/content/Intent;II)I\n    .locals 1\n\n    const/4 v0, 0x2\n\n    return v0\n.end method"
+  },
+  {
+   "path": "smali_classes10/com/facebook/analytics2/logger/service/LollipopUploadSafeService.smali",
+   "header": ".method public onStartCommand(Landroid/content/Intent;II)I",
+   "replacement": ".method public onStartCommand(Landroid/content/Intent;II)I\n    .locals 1\n\n    const/4 v0, 0x2\n\n    return v0\n.end method"
+  },
+  {
+   "path": "smali_classes10/com/facebook/analytics2/logger/service/LollipopUploadSafeService.smali",
+   "header": ".method public onStartJob(Landroid/app/job/JobParameters;)Z",
+   "replacement": ".method public onStartJob(Landroid/app/job/JobParameters;)Z\n    .locals 1\n\n    const/4 v0, 0x0\n\n    return v0\n.end method"
+  },
+  {
+   "path": "smali_classes10/com/facebook/analytics2/logger/service/LollipopUploadSafeService.smali",
+   "header": ".method public onStopJob(Landroid/app/job/JobParameters;)Z",
+   "replacement": ".method public onStopJob(Landroid/app/job/JobParameters;)Z\n    .locals 1\n\n    const/4 v0, 0x0\n\n    return v0\n.end method"
+  },
+  {
+   "path": "smali_classes10/com/facebook/advancedcryptotransport/api/impl/service/AdvancedCryptoTransportNotificationService.smali",
+   "header": ".method public onStartCommand(Landroid/content/Intent;II)I",
+   "replacement": ".method public onStartCommand(Landroid/content/Intent;II)I\n    .locals 1\n\n    const/4 v0, 0x2\n\n    return v0\n.end method"
+  },
+  {
+   "path": "smali_classes10/com/facebook/advancedcryptotransport/api/impl/service/AdvancedCryptoTransportNotificationService.smali",
+   "header": ".method public onBind(Landroid/content/Intent;)Landroid/os/IBinder;",
+   "replacement": ".method public onBind(Landroid/content/Intent;)Landroid/os/IBinder;\n    .locals 1\n\n    const/4 v0, 0x0\n\n    return-object v0\n.end method"
+  },
+  {
+   "path": "smali_classes10/com/facebook/messaging/linkhandling/plugins/facebookvideolinkhandler/implementation/videolinkhandlerhelper/VideoLinkHandlerHelperNotificationService.smali",
+   "header": ".method public onStartCommand(Landroid/content/Intent;II)I",
+   "replacement": ".method public onStartCommand(Landroid/content/Intent;II)I\n    .locals 1\n\n    const/4 v0, 0x2\n\n    return v0\n.end method"
+  },
+  {
+   "path": "smali_classes10/com/facebook/messaging/linkhandling/plugins/facebookvideolinkhandler/implementation/videolinkhandlerhelper/VideoLinkHandlerHelperNotificationService.smali",
+   "header": ".method public onBind(Landroid/content/Intent;)Landroid/os/IBinder;",
+   "replacement": ".method public onBind(Landroid/content/Intent;)Landroid/os/IBinder;\n    .locals 1\n\n    const/4 v0, 0x0\n\n    return-object v0\n.end method"
+  },
+  {
+   "path": "smali_classes10/com/facebook/voltron/download/scheduledinstaller/OxygenScheduledInstallerJobService.smali",
+   "header": ".method public onStartJob(Landroid/app/job/JobParameters;)Z",
+   "replacement": ".method public onStartJob(Landroid/app/job/JobParameters;)Z\n    .locals 1\n\n    const/4 v0, 0x0\n\n    return v0\n.end method"
+  },
+  {
+   "path": "smali_classes10/com/facebook/voltron/download/scheduledinstaller/OxygenScheduledInstallerJobService.smali",
+   "header": ".method public onStopJob(Landroid/app/job/JobParameters;)Z",
+   "replacement": ".method public onStopJob(Landroid/app/job/JobParameters;)Z\n    .locals 1\n\n    const/4 v0, 0x0\n\n    return v0\n.end method"
+  },
+  {
+   "path": "smali_classes10/com/google/android/datatransport/runtime/scheduling/jobscheduling/JobInfoSchedulerService.smali",
+   "header": ".method public onStartJob(Landroid/app/job/JobParameters;)Z",
+   "replacement": ".method public onStartJob(Landroid/app/job/JobParameters;)Z\n    .locals 1\n\n    const/4 v0, 0x0\n\n    return v0\n.end method"
+  },
+  {
+   "path": "smali_classes10/com/google/android/datatransport/runtime/scheduling/jobscheduling/JobInfoSchedulerService.smali",
+   "header": ".method public onStopJob(Landroid/app/job/JobParameters;)Z",
+   "replacement": ".method public onStopJob(Landroid/app/job/JobParameters;)Z\n    .locals 1\n\n    const/4 v0, 0x0\n\n    return v0\n.end method"
+  },
+  {
+   "path": "smali_classes11/com/facebook/messenger/app/background/msys/MsysBackgroundSyncService.smali",
+   "header": ".method public onStartJob(Landroid/app/job/JobParameters;)Z",
+   "replacement": ".method public onStartJob(Landroid/app/job/JobParameters;)Z\n    .locals 1\n\n    const/4 v0, 0x0\n\n    return v0\n.end method"
+  },
+  {
+   "path": "smali_classes11/com/facebook/messenger/app/background/msys/MsysBackgroundSyncService.smali",
+   "header": ".method public onStopJob(Landroid/app/job/JobParameters;)Z",
+   "replacement": ".method public onStopJob(Landroid/app/job/JobParameters;)Z\n    .locals 1\n\n    const/4 v0, 0x0\n\n    return v0\n.end method"
+  },
+  {
+   "path": "smali_classes12/com/facebook/falco/jobscheduler/FFJobService.smali",
+   "header": ".method public onStartJob(Landroid/app/job/JobParameters;)Z",
+   "replacement": ".method public onStartJob(Landroid/app/job/JobParameters;)Z\n    .locals 1\n\n    const/4 v0, 0x0\n\n    return v0\n.end method"
+  },
+  {
+   "path": "smali_classes12/com/facebook/falco/jobscheduler/FFJobService.smali",
+   "header": ".method public onStopJob(Landroid/app/job/JobParameters;)Z",
+   "replacement": ".method public onStopJob(Landroid/app/job/JobParameters;)Z\n    .locals 1\n\n    const/4 v0, 0x0\n\n    return v0\n.end method"
+  },
+  {
+   "path": "smali_classes3/androidx/work/impl/background/systemjob/SystemJobService.smali",
+   "header": ".method public onStartJob(Landroid/app/job/JobParameters;)Z",
+   "replacement": ".method public onStartJob(Landroid/app/job/JobParameters;)Z\n    .locals 1\n\n    const/4 v0, 0x0\n\n    return v0\n.end method"
+  },
+  {
+   "path": "smali_classes3/androidx/work/impl/background/systemjob/SystemJobService.smali",
+   "header": ".method public onStopJob(Landroid/app/job/JobParameters;)Z",
+   "replacement": ".method public onStopJob(Landroid/app/job/JobParameters;)Z\n    .locals 1\n\n    const/4 v0, 0x0\n\n    return v0\n.end method"
+  },
+  {
+   "path": "smali_classes3/com/facebook/analytics2/logger/legacy/uploader/LollipopUploadService.smali",
+   "header": ".method public onStartCommand(Landroid/content/Intent;II)I",
+   "replacement": ".method public onStartCommand(Landroid/content/Intent;II)I\n    .locals 1\n\n    const/4 v0, 0x2\n\n    return v0\n.end method"
+  },
+  {
+   "path": "smali_classes3/com/facebook/analytics2/logger/legacy/uploader/LollipopUploadService.smali",
+   "header": ".method public onStartJob(Landroid/app/job/JobParameters;)Z",
+   "replacement": ".method public onStartJob(Landroid/app/job/JobParameters;)Z\n    .locals 1\n\n    const/4 v0, 0x0\n\n    return v0\n.end method"
+  },
+  {
+   "path": "smali_classes3/com/facebook/analytics2/logger/legacy/uploader/LollipopUploadService.smali",
+   "header": ".method public onStopJob(Landroid/app/job/JobParameters;)Z",
+   "replacement": ".method public onStopJob(Landroid/app/job/JobParameters;)Z\n    .locals 1\n\n    const/4 v0, 0x0\n\n    return v0\n.end method"
+  },
+  {
+   "path": "smali_classes3/com/facebook/oxygen/preloads/sdk/firstparty/managedappcache/IsManagedAppCacheJobService.smali",
+   "header": ".method public onStartJob(Landroid/app/job/JobParameters;)Z",
+   "replacement": ".method public onStartJob(Landroid/app/job/JobParameters;)Z\n    .locals 1\n\n    const/4 v0, 0x0\n\n    return v0\n.end method"
+  },
+  {
+   "path": "smali_classes3/com/facebook/oxygen/preloads/sdk/firstparty/managedappcache/IsManagedAppCacheJobService.smali",
+   "header": ".method public onStopJob(Landroid/app/job/JobParameters;)Z",
+   "replacement": ".method public onStopJob(Landroid/app/job/JobParameters;)Z\n    .locals 1\n\n    const/4 v0, 0x0\n\n    return v0\n.end method"
+  },
+  {
+   "path": "smali_classes10/com/facebook/common/jobscheduler/compat/GcmTaskServiceCompat.smali",
+   "header": ".method public final onStartCommand(Landroid/content/Intent;II)I",
+   "replacement": ".method public final onStartCommand(Landroid/content/Intent;II)I\n    .locals 1\n\n    const/4 v0, 0x2\n\n    return v0\n.end method"
+  },
+  {
+   "path": "smali_classes3/com/facebook/common/jobscheduler/compat/JobServiceCompat.smali",
+   "header": ".method public final onStartCommand(Landroid/content/Intent;II)I",
+   "replacement": ".method public final onStartCommand(Landroid/content/Intent;II)I\n    .locals 1\n\n    const/4 v0, 0x2\n\n    return v0\n.end method"
+  },
+  {
+   "path": "smali_classes3/com/facebook/common/jobscheduler/compat/JobServiceCompat.smali",
+   "header": ".method public final onStartJob(Landroid/app/job/JobParameters;)Z",
+   "replacement": ".method public final onStartJob(Landroid/app/job/JobParameters;)Z\n    .locals 1\n\n    const/4 v0, 0x0\n\n    return v0\n.end method"
+  },
+  {
+   "path": "smali_classes3/com/facebook/common/jobscheduler/compat/JobServiceCompat.smali",
+   "header": ".method public final onStopJob(Landroid/app/job/JobParameters;)Z",
+   "replacement": ".method public final onStopJob(Landroid/app/job/JobParameters;)Z\n    .locals 1\n\n    const/4 v0, 0x0\n\n    return v0\n.end method"
+  },
+  {
+   "path": "smali_classes4/com/facebook/analytics2/logger/legacy/uploader/AlarmBasedUploadService.smali",
+   "header": ".method public onBind(Landroid/content/Intent;)Landroid/os/IBinder;",
+   "replacement": ".method public onBind(Landroid/content/Intent;)Landroid/os/IBinder;\n    .locals 1\n\n    const/4 v0, 0x0\n\n    return-object v0\n.end method"
+  },
+  {
+   "path": "smali_classes4/com/facebook/analytics2/logger/legacy/uploader/AlarmBasedUploadService.smali",
+   "header": ".method public onStartCommand(Landroid/content/Intent;II)I",
+   "replacement": ".method public onStartCommand(Landroid/content/Intent;II)I\n    .locals 1\n\n    const/4 v0, 0x2\n\n    return v0\n.end method"
+  },
+  {
+   "path": "smali_classes10/com/google/android/gms/analytics/AnalyticsJobService.smali",
+   "header": ".method public final onStartCommand(Landroid/content/Intent;II)I",
+   "replacement": ".method public final onStartCommand(Landroid/content/Intent;II)I\n    .locals 1\n\n    const/4 v0, 0x2\n\n    return v0\n.end method"
+  },
+  {
+   "path": "smali_classes10/com/google/android/gms/analytics/AnalyticsJobService.smali",
+   "header": ".method public final onStartJob(Landroid/app/job/JobParameters;)Z",
+   "replacement": ".method public final onStartJob(Landroid/app/job/JobParameters;)Z\n    .locals 1\n\n    const/4 v0, 0x0\n\n    return v0\n.end method"
+  },
+  {
+   "path": "smali_classes10/com/google/android/gms/analytics/AnalyticsJobService.smali",
+   "header": ".method public final onStopJob(Landroid/app/job/JobParameters;)Z",
+   "replacement": ".method public final onStopJob(Landroid/app/job/JobParameters;)Z\n    .locals 1\n\n    const/4 v0, 0x0\n\n    return v0\n.end method"
+  },
+  {
+   "path": "smali_classes10/com/google/android/gms/analytics/AnalyticsService.smali",
+   "header": ".method public final onBind(Landroid/content/Intent;)Landroid/os/IBinder;",
+   "replacement": ".method public final onBind(Landroid/content/Intent;)Landroid/os/IBinder;\n    .locals 1\n\n    const/4 v0, 0x0\n\n    return-object v0\n.end method"
+  },
+  {
+   "path": "smali_classes10/com/google/android/gms/analytics/AnalyticsService.smali",
+   "header": ".method public final onStartCommand(Landroid/content/Intent;II)I",
+   "replacement": ".method public final onStartCommand(Landroid/content/Intent;II)I\n    .locals 1\n\n    const/4 v0, 0x2\n\n    return v0\n.end method"
+  },
+  {
+   "path": "smali_classes10/com/facebook/screencast/ScreencastService.smali",
+   "header": ".method public onBind(Landroid/content/Intent;)Landroid/os/IBinder;",
+   "replacement": ".method public onBind(Landroid/content/Intent;)Landroid/os/IBinder;\n    .locals 1\n\n    const/4 v0, 0x0\n\n    return-object v0\n.end method"
+  },
+  {
+   "path": "smali_classes10/com/facebook/screencast/ScreencastService.smali",
+   "header": ".method public onStartCommand(Landroid/content/Intent;II)I",
+   "replacement": ".method public onStartCommand(Landroid/content/Intent;II)I\n    .locals 1\n\n    const/4 v0, 0x2\n\n    return v0\n.end method"
+  },
+  {
+   "path": "smali_classes4/com/facebook/video/heroplayer/service/HeroKeepAliveService.smali",
+   "header": ".method public onBind(Landroid/content/Intent;)Landroid/os/IBinder;",
+   "replacement": ".method public onBind(Landroid/content/Intent;)Landroid/os/IBinder;\n    .locals 1\n\n    const/4 v0, 0x0\n\n    return-object v0\n.end method"
+  },
+  {
+   "path": "smali_classes4/com/facebook/video/heroplayer/service/HeroKeepAliveService.smali",
+   "header": ".method public onStartCommand(Landroid/content/Intent;II)I",
+   "replacement": ".method public onStartCommand(Landroid/content/Intent;II)I\n    .locals 1\n\n    const/4 v0, 0x2\n\n    return v0\n.end method"
+  },
+  {
+   "path": "smali_classes3/com/facebook/wearlistener/DataLayerListenerService.smali",
+   "header": ".method public final onBind(Landroid/content/Intent;)Landroid/os/IBinder;",
+   "replacement": ".method public final onBind(Landroid/content/Intent;)Landroid/os/IBinder;\n    .locals 1\n\n    const/4 v0, 0x0\n\n    return-object v0\n.end method"
+  },
+  {
+   "path": "smali_classes10/com/meta/wearable/acdc/sdk/service/ACDCRegistrationService.smali",
+   "header": ".method public A01()Landroid/os/IBinder;",
+   "replacement": ".method public A01()Landroid/os/IBinder;\n    .locals 1\n\n    const/4 v0, 0x0\n\n    return-object v0\n.end method"
+  },
+  {
+   "path": "smali_classes10/com/meta/wearable/acdc/sdk/service/ACDCRegistrationService.smali",
+   "header": ".method public A04()V",
+   "replacement": ".method public A04()V\n    .locals 0\n\n    return-void\n.end method"
+  }
+ ],
+ "bgPathRegex": "(background|notify|notification|push|mqtt|sync|upload|job|scheduler|alarm|directshare|wear|analytics|bugreport|keepalive|screencast|messengercar|fbnslite|oxygen|datatransport|systemalarm|systemjob|falco|nna|registration|chatheads|reels|montage|stories|sticker|marketplace|payments|camera|ar\\\\b|augmented|avatar|game|playground|memor|commerce|business|ads\\\\b|adunit|tracking|telemetry|logging|crashreport|errorreport|profiler|perf|debug|internalprefs|experiment|quickpromotion|survey|feedback|sso|accountkit|credential|appindex|deeplinking|shortcut|widget|bubble|pip\\\\b|floatingwindow|overlay|badge|jewel|aibot|metaai|aistudio|assistant)",
+ "activityWhitelist": [
+  "androidx[\\\\/]",
+  "android[\\\\/]",
+  "com[\\\\/]google[\\\\/]",
+  "com[\\\\/]android[\\\\/]",
+  "com[\\\\/]spotify[\\\\/]",
+  "fx[\\\\/]thirdpartyoauth",
+  "base[\\\\/]activity[\\\\/]Delegating",
+  "orca[\\\\/](auth|app|Fb|HomeTabs|Droidguard|threadview)",
+  "messenger[\\\\/]neue[\\\\/]",
+  "messenger[\\\\/]intents[\\\\/]",
+  "resources[\\\\/]impl[\\\\/]Waiting",
+  "voltron[\\\\/]",
+  "checkpoint[\\\\/]",
+  "rtc[\\\\/](activities|incall)",
+  "messaging[\\\\/](threadlist|threadview|inbox|composer|lite)",
+  "messaging[\\\\/](model|msys|e2ee|sms|mms)",
+  "messaging[\\\\/]app[\\\\/]",
+  "messenger[\\\\/]app[\\\\/]",
+  "messenger[\\\\/]lite",
+  "base[\\\\/]activity",
+  "FbFragmentActivity",
+  "FbPreferenceActivity",
+  "FbActivity",
+  "messaging[\\\\/]conversationlist",
+  "messaging[\\\\/]conversation[\\\\/]",
+  "messaging[\\\\/]messagelist",
+  "messaging[\\\\/]media[\\\\/]",
+  "mediaviewer",
+  "MediaViewer",
+  "photoview",
+  "PhotoView",
+  "messaging[\\\\/]video",
+  "videoplayer",
+  "sharedcontent[\\\\/]",
+  "messaging[\\\\/]attachments",
+  "messaging[\\\\/]photos[\\\\/]",
+  "messaging[\\\\/]contactpicker",
+  "messaging[\\\\/]newthread",
+  "messaging[\\\\/]forwardpicker",
+  "messaging[\\\\/]groupthread",
+  "messaging[\\\\/]threadcreation",
+  "login",
+  "auth[\\\\/]",
+  "growth[\\\\/]",
+  "webview",
+  "WebViewActivity",
+  "browser",
+  "CustomTab",
+  "TransparentActivity",
+  "messaging[\\\\/]gifpicker",
+  "messaging[\\\\/]emojipicker",
+  "messaging[\\\\/]stickerpicker",
+  "messaging[\\\\/]audioplayer",
+  "messaging[\\\\/]voicemessage",
+  "messaging[\\\\/]richmedia",
+  "messaging[\\\\/]upsell",
+  "messaging[\\\\/]deeplink",
+  "messaging[\\\\/]notification[\\\\/].*open",
+  "messaging[\\\\/]notification[\\\\/].*redirect",
+  "installreferrer",
+  "FacebookContentProvider",
+  "InitProvider",
+  "WorkManagerInitializer",
+  "FileProvider",
+  "StartupProvider"
+ ],
+ "serviceWhitelist": [
+  "rtc[\\\\/]",
+  "push[\\\\/]fbnslite[\\\\/]FbnsLiteRtc",
+  "messaging[\\\\/](msys|e2ee|sms|mms)",
+  "messaging[\\\\/]app[\\\\/]",
+  "messenger[\\\\/]app[\\\\/]",
+  "orca[\\\\/]app",
+  "base[\\\\/]",
+  "InitProvider",
+  "WorkManagerInitializer",
+  "FileProvider",
+  "firebase[\\\\/]messaging",
+  "messaging[\\\\/]service[\\\\/]core",
+  "messaging[\\\\/]lite"
+ ],
+ "providerWhitelist": [
+  "orca[\\\\/]",
+  "messaging[\\\\/]",
+  "messenger[\\\\/]",
+  "base[\\\\/]",
+  "FileProvider",
+  "InitProvider",
+  "WorkManagerInitializer",
+  "StartupProvider",
+  "LifecycleDispatcher",
+  "ProcessLifecycleOwner",
+  "EmojiCompatInitializer",
+  "ProfilerInitProvider",
+  "firebase",
+  "google[\\\\/]",
+  "androidx[\\\\/]"
+ ]
+}

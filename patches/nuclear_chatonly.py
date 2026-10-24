@@ -1,74 +1,34 @@
 #!/usr/bin/env python3
-"""Nuclear chat-only patch - Linux/Python port of scripts/apply-nuclear-chatonly.ps1.
+"""Chat-only rezy Messengera (smali patch) - Linux/Python.
 
-Rovnaka semantika ako PowerShell verzia, ale:
-  * bezi na Linuxe,
-  * je verzio-agnosticka: ciele sa hladaju podla package cesty (com/facebook/...),
-    nie podla smali_classesN/ prefixu, ktory sa medzi verziami Messengera meni,
-  * hook metody (obfuskovane onCreate v FbFragmentActivity/FbPreferenceActivity)
-    sa detegujú z APK, nie natvrdo A32/A0F,
-  * HOVORY (RTC) ZOSTAVAJU ZIVE - viď CALL_WHITELIST.
+  * ciele sa hladaju podla package cesty (com/facebook/...), nie podla smali_classesN/
+    prefixu, ktory sa medzi verziami Messengera meni,
+  * hook metody (obfuskovane onCreate v FbFragmentActivity/FbPreferenceActivity) sa
+    detegujú z APK, nie natvrdo,
+  * HOVORY (RTC) ZOSTAVAJU ZIVE - viď CALL_WHITELIST; sprava a media - MSG_/MEDIA_WHITELIST.
 
-Datove zoznamy (uiTargets, batteryRules, whitelisty, bgPathRegex) sa citaju priamo
-z apply-nuclear-chatonly.ps1, aby ostal jeden zdroj pravdy.
+Datove zoznamy (uiTargets, batteryRules, whitelisty, bgPathRegex) su v cuts.json vedla.
+Pouzitie: nuclear_chatonly.py <dekodovany_strom> [--report subor] [--dry-run]
 """
 from __future__ import annotations
 
 import argparse
+import json
 import re
 import sys
 from collections import Counter, defaultdict
 from pathlib import Path
 
-# ── ps1 parsing helpers ──────────────────────────────────────────────────
+# ── nacitanie dat ──────────────────────────────────────────────────────
 
-def ps_block(text: str, var: str) -> str:
-    """Vrati telo `$var = @( ... )`."""
-    start = text.index(f"${var} = @(")
-    i = text.index("(", start)
-    depth = 0
-    for j in range(i, len(text)):
-        if text[j] == "(":
-            depth += 1
-        elif text[j] == ")":
-            depth -= 1
-            if depth == 0:
-                return text[i + 1:j]
-    raise ValueError(f"unterminated block for ${var}")
-
-
-def ps_unescape(s: str) -> str:
-    return s.replace("`r`n", "\n").replace("`n", "\n").replace("`r", "").replace("``", "`")
-
-
-def parse_targets(text: str, var: str) -> list[str]:
-    return [m.group(1) for m in re.finditer(r"'([^']*\.smali)'", ps_block(text, var))]
-
-
-def parse_rules(text: str, var: str) -> list[tuple[str, str, str]]:
-    block = ps_block(text, var)
-    out = []
-    for m in re.finditer(r"@\{\s*P='([^']+)';\s*H='([^']+)';\s*R=\"(.*?)\"\s*\}", block, re.S):
-        out.append((m.group(1), m.group(2), ps_unescape(m.group(3))))
-    return out
-
-
-def parse_regex_list(text: str, var: str) -> list[str]:
-    return [m.group(1) for m in re.finditer(r"'((?:[^']|'')*)'", ps_block(text, var))]
-
-
-def parse_scalar_regex(text: str, var: str) -> str:
-    m = re.search(rf"\${var} = '(.*)'\s*$", text, re.M)
-    if not m:
-        raise ValueError(f"${var} not found")
-    return m.group(1)
+def load_cuts(path: Path) -> dict:
+    return json.loads(path.read_text(encoding="utf-8"))
 
 
 def ps_rx(pattern: str) -> re.Pattern:
-    """PowerShell regex literal -> Python (cesty su porovnavane case-insensitive)."""
-    return re.compile(pattern.replace("\\\\", "\\\\"), re.IGNORECASE)
+    """Regex z cuts.json (cesty su porovnavane case-insensitive)."""
+    return re.compile(pattern, re.IGNORECASE)
 
-# ── smali tree ───────────────────────────────────────────────────────────
 
 ROOT_SEG = re.compile(r"^(smali|smali_classes\d+|classes\d*)$")
 
@@ -121,7 +81,7 @@ SVC_SPECS = [(p, r) for p, r in NOOP_SPECS
 PROVIDER_SPEC = (re.compile(r"(\.method(?![^\n]*abstract)[^\n]* onCreate\(\)Z)\n.*?\.end method", re.S),
                  "\\1\n    .locals 1\n\n    const/4 v0, 0x1\n\n    return v0\n.end method")
 
-# Hovory: tieto cesty sa NIKDY neposkodia (nad ramec whitelistov v .ps1).
+# Hovory: tieto cesty sa NIKDY neposkodia (nad ramec whitelistov v cuts.json).
 CALL_WHITELIST = re.compile(
     r"(rtc[/])|([Rr]tc[A-Z])|(voip)|(calling[/])|(FbnsLiteRtc)"
     # runtimepermissions: cez RequestPermissionsActivity si appka pyta mikrofon/kameru
@@ -199,7 +159,7 @@ def detect_hook(files: list[Path], superclass: str, fallback: str) -> str:
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("workdir", help="decompiled tree (APKEditor alebo apktool)")
-    ap.add_argument("--ps1", default=None, help="cesta k apply-nuclear-chatonly.ps1")
+    ap.add_argument("--cuts", default=None, help="cesta k cuts.json (default: vedla skriptu)")
     ap.add_argument("--report", default=None)
     ap.add_argument("--dry-run", action="store_true")
     args = ap.parse_args()
@@ -208,8 +168,7 @@ def main() -> int:
     if not base.is_dir():
         print(f"chyba: {base} neexistuje", file=sys.stderr)
         return 1
-    ps1 = Path(args.ps1) if args.ps1 else Path(__file__).resolve().parents[1] / "apply-nuclear-chatonly.ps1"
-    text = ps1.read_text(encoding="utf-8", errors="ignore")
+    cuts = load_cuts(Path(args.cuts) if args.cuts else Path(__file__).resolve().parent / "cuts.json")
 
     files = sorted(base.rglob("*.smali"))
     print(f"smali suborov: {len(files)}")
@@ -255,7 +214,7 @@ def main() -> int:
 
     # ── PHASE 1: cielene UI aktivity ─────────────────────────────────────
     p1 = p1miss = p1skip = 0
-    for target in dict.fromkeys(parse_targets(text, "uiTargets")):
+    for target in dict.fromkeys(cuts["uiTargets"]):
         paths = index.get(strip_prefix(target))
         if not paths:
             p1miss += 1
@@ -269,7 +228,8 @@ def main() -> int:
 
     # ── PHASE 2: cielene battery/background kills ────────────────────────
     p2 = p2miss = p2skip = 0
-    for target, header, repl in parse_rules(text, "batteryRules"):
+    for r in cuts["batteryRules"]:
+        target, header, repl = r["path"], r["header"], r["replacement"]
         paths = index.get(strip_prefix(target))
         if not paths:
             p2miss += 1
@@ -286,7 +246,7 @@ def main() -> int:
     print(f"Phase 2: patched={p2} missing={p2miss} skipped={p2skip}")
 
     # ── PHASE 3: plosny background sweep ─────────────────────────────────
-    bg_rx = ps_rx(parse_scalar_regex(text, "bgPathRegex"))
+    bg_rx = ps_rx(cuts["bgPathRegex"])
     p3f = p3m = 0
     for f in files:
         rel = rel_of[f]
@@ -309,7 +269,7 @@ def main() -> int:
     print(f"Phase 3: files={p3f} methodGroups={p3m}")
 
     # ── PHASE 4: nuclear activity sweep ──────────────────────────────────
-    act_wl = re.compile("|".join(f"({p})" for p in parse_regex_list(text, "activityWhitelist")), re.IGNORECASE)
+    act_wl = re.compile("|".join(f"({p})" for p in cuts["activityWhitelist"]), re.IGNORECASE)
     p4 = p4wl = p4already = p4nomatch = 0
     for f in files:
         head = "\n".join(f.read_text(errors="ignore").split("\n")[:15])
@@ -332,7 +292,7 @@ def main() -> int:
     print(f"Phase 4: patched={p4} whitelisted={p4wl} already={p4already} nomatch={p4nomatch}")
 
     # ── PHASE 5: nuclear service/receiver sweep ──────────────────────────
-    svc_wl = re.compile("|".join(f"({p})" for p in parse_regex_list(text, "serviceWhitelist")), re.IGNORECASE)
+    svc_wl = re.compile("|".join(f"({p})" for p in cuts["serviceWhitelist"]), re.IGNORECASE)
     p5s = p5r = p5wl = 0
     for f in files:
         head = "\n".join(f.read_text(errors="ignore").split("\n")[:15])
@@ -356,7 +316,7 @@ def main() -> int:
     print(f"Phase 5: services={p5s} receivers={p5r} whitelisted={p5wl}")
 
     # ── PHASE 6: provider neutralizacia ──────────────────────────────────
-    prov_wl = re.compile("|".join(f"({p})" for p in parse_regex_list(text, "providerWhitelist")), re.IGNORECASE)
+    prov_wl = re.compile("|".join(f"({p})" for p in cuts["providerWhitelist"]), re.IGNORECASE)
     p6 = p6wl = 0
     rx6, repl6 = PROVIDER_SPEC
     for f in files:

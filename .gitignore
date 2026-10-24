@@ -1,37 +1,27 @@
-# Local binaries and artifacts
+# --- nikdy necommitovat: Meta binarky, dekompilovany kod, kluce, sukromne exporty ---
+*.apk
+*.apks
+*.aab
+*.idsig
+*.keystore
+*.jks
+*.dex
+*.so
 input/
 output/
 work/
 
-# Allow exactly one release artifact in git
-!output/
-output/*
-!output/messenger-550.0.0.45.63-spravaren-ultrabattery-v12-signed.apk
+# --- build ---
+tor-inject/build/
+tor-inject/.cache/
 
-# Decompiled/app internals (never commit)
-**/*.apk
-**/*.apks
-**/*.aab
-**/*.idsig
-**/*.keystore
-**/*.jks
-
-# Allow the single blessed APK above
-!output/messenger-550.0.0.45.63-spravaren-ultrabattery-v12-signed.apk
-
-# OS/editor
+# --- ostatne ---
+__pycache__/
+*.log
+*.err
 .vscode/
 .DS_Store
 Thumbs.db
 
-# keep repo root clean (scratch logs/errs)
-/*.log
-logs/*.log
-/*.err
-
-# conversation exports (contain private data) - never commit
-/20??-*-mozes-moj-*.txt
+# konverzacne exporty (obsahuju sukromne data)
 /20??-*.txt
-
-# python cache
-__pycache__/

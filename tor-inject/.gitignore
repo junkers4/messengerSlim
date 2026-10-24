@@ -1,6 +1,0 @@
-build/
-*.apk
-*.dex
-*.so
-
-.cache/
