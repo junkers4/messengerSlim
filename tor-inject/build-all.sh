@@ -88,10 +88,11 @@ for c in $FB_CERTS; do grep -q "certificate SHA-256 digest: $c" "$WORK/certs.txt
 echo "== 2) APKEditor decode (smali) =="
 java -jar "$APKEDITOR" d -i "$IN_APK" -o "$WORK/decoded"
 
-echo "== 3) chat-only rezy + QUIC off + branding =="
+echo "== 3) chat-only rezy + QUIC off + branding + panel =="
 python3 "$REPO/scripts/py/nuclear_chatonly.py" "$WORK/decoded" --report "$WORK/cuts.txt"
 python3 "$REPO/scripts/py/no_quic.py" "$WORK/decoded"
 python3 "$REPO/scripts/py/branding.py" "$WORK/decoded"
+python3 "$REPO/scripts/py/panel_hook.py" "$WORK/decoded"
 
 echo "== 4) manifest: Tor komponenty + bez budenia na pozadi =="
 python3 - "$WORK/decoded/AndroidManifest.xml" "$HERE/manifest-inject.xml" <<'PY'

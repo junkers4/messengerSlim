@@ -39,6 +39,8 @@ public class OrcaTorVpnService extends VpnService {
     public static final String ACTION_START = "com.messengerslim.tor.START";
     public static final String ACTION_STOP  = "com.messengerslim.tor.STOP";
     public static final String ACTION_SLEEP = "com.messengerslim.tor.SLEEP";
+    /** Panel (podrzanie) -> novy okruh. */
+    public static final String ACTION_NEWNYM = "com.messengerslim.tor.NEWNYM";
     private static final String CHANNEL_ID = "orca_tor";
     private static final int NOTIF_ID = 90210;
 
@@ -100,6 +102,11 @@ public class OrcaTorVpnService extends VpnService {
     public int onStartCommand(Intent intent, int flags, int startId) {
         if (intent != null && ACTION_STOP.equals(intent.getAction())) {
             stopAll(); stopSelf(); quit(); return START_NOT_STICKY;
+        }
+        if (intent != null && ACTION_NEWNYM.equals(intent.getAction())) {
+            final TorController t = tor;
+            if (READY && t != null) new Thread(t::newCircuits, "orca-tor-newnym").start();
+            return START_STICKY;
         }
         if (intent != null && ACTION_SLEEP.equals(intent.getAction())) {
             Log.i(TAG, "Messenger zavrety/v pozadi -> Tor aj tunel dole, VPN kluc zmizne");
