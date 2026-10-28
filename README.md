@@ -9,6 +9,13 @@ through Tor, Facebook sees an exit node, not your IP. No Orbot.
 > private exports here (`.gitignore` blocks them). Use only your own copy of the APK on your
 > own device.
 
+<p align="center"><img src="docs/panel.png" width="320" alt="The Spravaren inbox: the panel with weather, name days and news (city blurred)"></p>
+
+**In short:** your own Messenger APK, patched so that all of its traffic goes through Tor, with the
+distractions removed (Stories, Reels, ads, Meta AI) and a small information panel on top of the inbox:
+weather, the date with name days, birthdays, a news strip and a 🧅✓ mark that shows Tor really is in use.
+The screenshot above is the top of the inbox.
+
 Target device: Pixel 9a, Android 16, arm64. Last verified Messenger: **584.1.0.61.98**.
 
 ## Contents
